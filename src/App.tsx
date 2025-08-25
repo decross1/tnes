@@ -1,9 +1,10 @@
 import { AnimatePresence } from 'framer-motion';
 import useGameStore from './stores/gameStore';
-import SceneDisplay from './components/SceneDisplay';
-import ChoiceButtons from './components/ChoiceButtons';
-import DiceRoller from './components/DiceRoller';
-import StoryScroll from './components/StoryScroll';
+import SceneDisplay from './components/game/SceneDisplay';
+import ChoiceButtons from './components/game/ChoiceButtons';
+import DiceRoller from './components/game/DiceRoller';
+import StoryScroll from './components/game/StoryScroll';
+import CharacterCreation from './components/character/CharacterCreation';
 import type { Choice, DiceRoll } from './types';
 import { generateUniqueId } from './utils/game';
 
@@ -14,10 +15,15 @@ function App() {
     storyHistory,
     pendingRoll,
     ui,
+    characterCreation,
+    campaign,
     setCurrentScene,
     addDecision,
     setPendingRoll,
-    updateUI
+    updateUI,
+    startCharacterCreation,
+    updateCharacterCreation,
+    completeCharacterCreation
   } = useGameStore();
 
   const handleChoiceSelect = (choice: Choice) => {
@@ -119,6 +125,13 @@ function App() {
               >
                 Chronicle
               </button>
+              <button
+                onClick={startCharacterCreation}
+                className="choice-button"
+                style={{ width: 'auto', padding: '8px 16px', backgroundColor: '#CD7F32' }}
+              >
+                New Character
+              </button>
             </div>
           </div>
         </div>
@@ -182,6 +195,16 @@ function App() {
         isOpen={ui.showStoryScroll}
         onClose={() => updateUI({ showStoryScroll: false })}
       />
+
+      {/* Character Creation Modal */}
+      <AnimatePresence>
+        {characterCreation.isActive && (
+          <CharacterCreation
+            onComplete={completeCharacterCreation}
+            onCancel={() => updateCharacterCreation({ isActive: false })}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

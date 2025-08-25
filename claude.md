@@ -1,16 +1,16 @@
 # Claude.md - D&D Solo Adventure App Development Guide
 
-## Project Status: SCAFFOLDING COMPLETE ✅
-**Current Phase**: Basic app structure and UI completed, ready for AI integration
+## Project Status: SCAFFOLDING COMPLETE ✅ → CHARACTER CREATION PHASE 🎭
+**Current Phase**: Basic app structure completed, now implementing character creation with AI integration
 
 ## Project Context
 You are helping build a dynamic choose-your-own-adventure D&D game where:
-- Players make binary choices at each decision point
-- Dice rolls (d20 + modifiers) determine outcomes
-- AI generates dynamic story content and choices
-- Each scene includes an AI-generated image
-- A story scroll tracks all decisions and rolls
-- The game follows simplified D&D 5e mechanics
+- Players create personalized characters with AI-generated backstories
+- Binary choices at each decision point with D&D dice mechanics
+- AI generates dynamic story content based on character and campaign keywords
+- Each scene includes AI-generated images
+- Three-tier keyword system drives personalized narrative evolution
+- Story scroll tracks all decisions, rolls, and character development
 
 ## ✅ COMPLETED FEATURES (v0.1.0)
 
@@ -21,6 +21,7 @@ You are helping build a dynamic choose-your-own-adventure D&D game where:
 - ✅ Zustand state management with persistence
 - ✅ Framer Motion animations
 - ✅ Complete TypeScript type definitions
+- ✅ Git repository with main branch pushed to GitHub
 
 ### Game Mechanics
 - ✅ D&D 5e ability score system
@@ -30,7 +31,7 @@ You are helping build a dynamic choose-your-own-adventure D&D game where:
 - ✅ Critical success/failure detection (Natural 20/1)
 - ✅ Four character classes: Fighter, Rogue, Wizard, Cleric
 
-### UI Components
+### UI Components (Existing)
 - ✅ **SceneDisplay**: Story rendering with image support
 - ✅ **ChoiceButtons**: Interactive choices with ability check indicators  
 - ✅ **DiceRoller**: Animated 3D dice with proper D&D mechanics
@@ -45,58 +46,257 @@ You are helping build a dynamic choose-your-own-adventure D&D game where:
 - ✅ Smooth animations and transitions
 - ✅ Loading states and error handling
 
+## 🎭 CHARACTER CREATION SYSTEM (IN DEVELOPMENT)
+
+### Game Initialization Flow
+```
+[Start] → [Character Selection] → [Backstory Options] → [Campaign Setup] → [Game Begin]
+```
+
+### Character Creation Interface
+```typescript
+interface CharacterCreationState {
+  selectedClass: 'Fighter' | 'Rogue' | 'Wizard' | 'Cleric';
+  characterName: string;
+  backstoryMethod: 'ai-generate' | 'custom-write' | 'keywords' | 'skip';
+  backstoryContent?: string;
+  backstoryKeywords?: string[];
+  portraitUrl?: string;
+  isGeneratingPortrait?: boolean;
+}
+```
+
+### Backstory Generation Options
+1. **🎲 "Generate My Story"** - AI creates full backstory based on class and name
+2. **✍️ "Write My Own"** - Textarea for custom backstory input  
+3. **🏷️ "Build from Keywords"** - Tag input system with suggestions
+4. **⚡ "Skip & Start Playing"** - Use default class-based backstory
+
+### Campaign Setup Interface
+```typescript
+interface CampaignSetup {
+  mode: 'full-random' | 'guided';
+  themes?: string[];        // ["dragons", "mystery", "dungeon"]
+  tone?: 'dark' | 'heroic' | 'comedic' | 'gritty';
+  startingLocation?: 'tavern' | 'dungeon' | 'wilderness' | 'city' | 'random';
+  campaignKeywords?: string[];  // Player's directional keywords
+}
+```
+
+## 🧠 AI INTEGRATION ARCHITECTURE
+
+### Claude API Integration
+```typescript
+// Backstory Generation
+const generateBackstoryPrompt = (class: string, name: string, keywords?: string[]) => `
+Create a compelling D&D character backstory for a ${class} named ${name}.
+${keywords ? `Include these elements: ${keywords.join(', ')}` : ''}
+Include: origin, motivation, a secret, and why they're adventuring.
+Keep it under 200 words, mysterious, with hooks for adventure.
+Write in second person perspective.
+`;
+
+// Portrait Generation Prompt
+const generatePortraitPrompt = (class: string, backstory: string) => `
+Create a detailed character portrait description for DALL-E:
+Character: ${class}
+Backstory context: ${backstory.substring(0, 200)}...
+
+Style: Fantasy digital art, D&D character portrait, detailed face and upper body,
+epic fantasy setting, dramatic lighting, high quality, --ar 1:1
+`;
+```
+
+### Three-Tier Keyword System
+```typescript
+class KeywordManager {
+  // Tier 1: Campaign Keywords (Weight: 1.0) - Set during campaign creation
+  private campaignKeywords: Map<string, number>;
+  
+  // Tier 2: Dynamic Keywords (Weight: 0.5-0.8) - Extracted from player choices
+  private dynamicKeywords: Map<string, number>;
+  
+  // Tier 3: Scene Keywords (Weight: 0.3) - Temporary scene-specific
+  private sceneKeywords: Map<string, number>;
+
+  getWeightedKeywords(): string[] {
+    // Returns top 7 keywords sorted by weight and recency
+  }
+}
+```
+
+## 📊 EXTENDED STATE MANAGEMENT
+
+### Updated Game Store Structure
+```typescript
+interface ExtendedGameState extends GameState {
+  // Character Creation
+  characterCreation: {
+    isActive: boolean;
+    step: 'class' | 'name' | 'backstory' | 'campaign';
+    selectedClass?: CharacterClass;
+    characterName?: string;
+    backstoryMethod?: BackstoryMethod;
+    backstoryContent?: string;
+    portraitUrl?: string;
+  };
+  
+  // Campaign Setup
+  campaign: {
+    keywords: string[];
+    tone: 'dark' | 'heroic' | 'comedic' | 'gritty';
+    startingLocation: string;
+    mode: 'full-random' | 'guided';
+    isSetup: boolean;
+  };
+  
+  // Keyword Management
+  keywordManager: {
+    campaign: KeywordWeight[];
+    dynamic: KeywordWeight[];
+    scene: KeywordWeight[];
+  };
+  
+  // Story Tracking
+  storyArc: {
+    act: 'introduction' | 'rising' | 'climax' | 'resolution';
+    mainQuest?: QuestLine;
+    sideQuests: QuestLine[];
+    plotPoints: PlotPoint[];
+    progress: number; // 0-100
+  };
+}
+```
+
 ## Core Technologies (CURRENT)
 - ✅ **Frontend**: React 19.1.1 with TypeScript 5.9.2
 - ✅ **State Management**: Zustand 5.0.8 with persistence
-- ✅ **Styling**: Custom CSS with fantasy theme (Tailwind CSS removed due to v4 compatibility issues)
-- 🟡 **AI Services**: Claude API for story, DALL-E 3 or Stable Diffusion for images (NOT YET IMPLEMENTED)
-- ✅ **Animations**: Framer Motion 12.23.12 for dice rolls and transitions
+- ✅ **Styling**: Custom CSS with fantasy theme
+- 🟡 **AI Services**: Claude API for story/backstory, DALL-E 3/Stable Diffusion for portraits
+- ✅ **Animations**: Framer Motion 12.23.12
 - ✅ **Build Tool**: Vite 7.1.3
 
-## 🔄 NEXT DEVELOPMENT PHASE
+## 🚀 DEVELOPMENT ROADMAP
 
-### Priority 1: AI Integration
-- 🟡 Set up Claude API service layer
-- 🟡 Implement dynamic story generation
-- 🟡 Create scene context system for continuity
-- 🟡 Add image generation integration
+### Phase 1: Character Creation (CURRENT SPRINT)
+- 🟡 **CharacterCreation** component with class selection cards
+- 🟡 **BackstoryGenerator** with AI integration and keyword support
+- 🟡 **KeywordInput** component with suggestions and tagging
+- 🟡 **CampaignSetup** component with tone/location selection
+- 🟡 **PortraitGenerator** with DALL-E/Stable Diffusion integration
+- 🟡 **Claude API service layer** for backstory generation
+- 🟡 **Extended GameStore** with character creation state
 
-### Priority 2: Game Content
-- 🟡 Create fallback story content system
-- 🟡 Build scene templates and variations
-- 🟡 Implement combat encounters
-- 🟡 Add character progression (leveling, XP, items)
+### Phase 2: AI Story Generation (NEXT)
+- 🟡 Scene generation with keyword integration
+- 🟡 Binary choice generation system
+- 🟡 Outcome generation based on dice rolls
+- 🟡 Dynamic keyword extraction from player actions
+- 🟡 Story arc progression tracking
 
-### Priority 3: Polish & Features
+### Phase 3: Advanced Features
+- 🟡 Character progression and leveling
+- 🟡 Combat encounter system
+- 🟡 Advanced relationship tracking
+- 🟡 Campaign templates and presets
+
+### Phase 4: Polish & Deployment
 - 🟡 Sound effects and audio
-- 🟡 Save/load system improvements  
-- 🟡 Character creation wizard
-- 🟡 Settings and accessibility options
+- 🟡 Advanced image generation
+- 🟡 Performance optimization
+- 🟡 Deployment and hosting
 
-## IMPORTANT TECHNICAL NOTES
+## 🛠️ NEW COMPONENTS TO BUILD
 
-### CSS Architecture Decision
-**CHANGED**: Removed Tailwind CSS v4.1.12 due to PostCSS compatibility issues. Now using custom CSS with:
-- Fantasy color palette and typography
-- Component-based styling approach
-- Responsive design patterns
-- Animation keyframes for dice and transitions
+### 1. CharacterCreation.tsx
+- Class selection with visual cards
+- Character naming interface
+- Backstory generation options
+- Portrait generation integration
 
-### Current File Structure
+### 2. KeywordInput.tsx
+- Tag-based input system
+- Suggestion chips with categories
+- Keyword validation and weighting
+
+### 3. CampaignSetup.tsx  
+- Mode selection (random vs guided)
+- Tone selector with descriptions
+- Starting location picker
+- Keyword integration for campaign direction
+
+### 4. BackstoryGenerator.tsx
+- Multiple generation methods
+- Preview and editing capabilities
+- Integration with keyword system
+
+## 📁 UPDATED FILE STRUCTURE
 ```
 src/
-├── components/          # UI components (SceneDisplay, ChoiceButtons, etc.)
-├── stores/             # Zustand state management
-├── types/              # TypeScript interfaces
-├── utils/              # Game mechanics and character utilities
-├── services/           # 🟡 API integration layer (TODO)
-├── assets/             # 🟡 Images and sounds (TODO)
-├── App.tsx             # Main application
-├── main.tsx            # React entry point
-└── index.css           # Custom fantasy-themed CSS
+├── components/
+│   ├── character/          # 🟡 NEW: Character creation components
+│   │   ├── CharacterCreation.tsx
+│   │   ├── ClassSelection.tsx
+│   │   ├── BackstoryGenerator.tsx
+│   │   └── PortraitGenerator.tsx
+│   ├── campaign/           # 🟡 NEW: Campaign setup components
+│   │   ├── CampaignSetup.tsx
+│   │   ├── KeywordInput.tsx
+│   │   └── ToneSelector.tsx
+│   ├── game/              # ✅ EXISTING: Game components
+│   │   ├── SceneDisplay.tsx
+│   │   ├── ChoiceButtons.tsx
+│   │   ├── DiceRoller.tsx
+│   │   └── StoryScroll.tsx
+├── services/              # 🟡 NEW: API integration
+│   ├── claudeApi.ts
+│   ├── imageApi.ts
+│   └── fallbackContent.ts
+├── stores/                # ✅ EXISTING + Extensions
+│   ├── gameStore.ts       # Extended with character creation
+│   └── keywordManager.ts  # 🟡 NEW: Keyword management
+├── types/                 # ✅ EXISTING + Extensions
+│   ├── character.ts       # Extended with creation types
+│   ├── campaign.ts        # 🟡 NEW: Campaign types
+│   └── keywords.ts        # 🟡 NEW: Keyword system types
+├── utils/                 # ✅ EXISTING + Extensions
+│   ├── character.ts       # Extended with creation utilities
+│   ├── prompts.ts         # 🟡 NEW: AI prompt templates
+│   └── keywordUtils.ts    # 🟡 NEW: Keyword processing
 ```
 
-### Development Commands
+## 🎯 EXAMPLE CHARACTER CREATION FLOW
+```
+1. Player selects Fighter class
+2. Names character "Marcus Brightblade"
+3. Chooses "Build from Keywords" backstory option
+4. Adds keywords: ["revenge", "noble house", "cursed sword"]
+5. AI generates backstory incorporating all keywords
+6. AI generates character portrait based on backstory
+7. Player sets up campaign with "guided" mode
+8. Adds campaign keywords: ["political intrigue", "ancient magic"]
+9. Selects "dark fantasy" tone and "city" starting location  
+10. Game begins with personalized opening scene
+11. All keywords influence future story generation
+```
+
+## 💡 AI PROMPT ARCHITECTURE
+
+### Backstory Generation Templates
+```typescript
+const BACKSTORY_PROMPTS = {
+  full: (character: Character) => `...`,
+  keywords: (character: Character, keywords: string[]) => `...`,
+  class_based: (character: Character) => `...`,
+};
+
+const PORTRAIT_PROMPTS = {
+  detailed: (character: Character, backstory: string) => `...`,
+  simple: (character: Character) => `...`,
+};
+```
+
+## 🔧 Development Commands
 ```bash
 # Development (WORKING)
 npm run dev              # Starts on http://localhost:5173/
@@ -104,302 +304,32 @@ npm run dev              # Starts on http://localhost:5173/
 # Build (WORKING) 
 npm run build           # TypeScript compilation + Vite build
 
+# Git workflow
+git status              # Check current changes
+git add .               # Stage changes
+git commit -m "msg"     # Commit with message
+git push origin feature/ai-integration  # Push to feature branch
+
 # Environment Setup
 # Add your API keys to .env file:
-# VITE_CLAUDE_API_KEY=your_key_here
-# VITE_IMAGE_API_KEY=your_key_here
+# VITE_CLAUDE_API_KEY=your_claude_key_here
+# VITE_OPENAI_API_KEY=your_dalle_key_here (for DALL-E)
+# VITE_STABILITY_API_KEY=your_stability_key_here (for Stable Diffusion)
 ```
 
-## Development Principles
+## 🧪 TESTING SCENARIOS
 
-### 1. Game Mechanics First
-Always ensure D&D mechanics are properly implemented:
-- Ability modifiers: `Math.floor((ability - 10) / 2)`
-- Proficiency bonus: `2 + Math.floor((level - 1) / 4)`
-- Advantage/Disadvantage: Roll twice, take higher/lower
-- Critical hits/fails: Natural 20/1 on d20
+### Character Creation Testing
+1. **Class Selection**: Ensure all 4 classes work with proper stats
+2. **Backstory Generation**: Test all 4 generation methods
+3. **Keyword Integration**: Verify keywords influence story generation
+4. **Portrait Generation**: Test with different character descriptions
+5. **Campaign Setup**: Ensure all combinations of settings work
 
-### 2. AI Prompt Engineering
-When generating prompts for Claude API:
-```typescript
-// Always include:
-const context = {
-  characterState: getCurrentCharacter(),
-  recentHistory: getLastNDecisions(3),
-  currentObjective: getActiveQuest(),
-  toneGuidelines: "Dark fantasy, immersive, second-person narrative"
-};
-```
+### AI Integration Testing  
+1. **API Resilience**: Handle API failures gracefully
+2. **Prompt Effectiveness**: Verify generated content quality
+3. **Keyword Weighting**: Test keyword priority system
+4. **Context Persistence**: Ensure story continuity across scenes
 
-### 3. Image Generation Best Practices
-```typescript
-// Image prompt structure:
-const imagePrompt = `
-  Fantasy digital art style,
-  ${sceneDescription},
-  Dramatic lighting,
-  Epic composition,
-  D&D aesthetic,
-  --ar 16:9
-`;
-```
-
-### 4. State Management Pattern
-```typescript
-// Use this structure for game state:
-interface GameState {
-  character: Character;
-  currentScene: Scene;
-  storyHistory: Decision[];
-  pendingRoll: PendingRoll | null;
-  ui: UIState;
-}
-```
-
-## Component Development Guidelines
-
-### Scene Display Component
-```tsx
-// SceneDisplay should:
-// 1. Render markdown from AI response
-// 2. Lazy load images with skeleton
-// 3. Animate text appearance
-// 4. Handle long descriptions with "read more"
-```
-
-### Choice Buttons
-```tsx
-// Each choice should display:
-// - Choice text
-// - Required ability check (e.g., "DEX Check DC 15")
-// - Advantage/disadvantage indicators
-// - Disabled state while rolling
-```
-
-### Dice Roller
-```tsx
-// Implement:
-// - 3D dice animation or sprite sequence
-// - Sound effects
-// - Roll history in tooltip
-// - Modifier breakdown on hover
-```
-
-### Story Scroll
-```tsx
-// Features:
-// - Virtualized list for performance
-// - Collapsible entries
-// - Filter by decision type
-// - Export to PDF/markdown
-```
-
-## API Integration Patterns
-
-### Claude API Calls
-```typescript
-// Use exponential backoff for retries
-// Cache responses by context hash
-// Implement streaming for long responses
-// Add timeout handling (30s max)
-
-async function generateScene(context: SceneContext): Promise<Scene> {
-  const cacheKey = hashContext(context);
-  if (cache.has(cacheKey)) return cache.get(cacheKey);
-  
-  try {
-    const response = await claudeAPI.complete({
-      prompt: buildScenePrompt(context),
-      max_tokens: 1000,
-      temperature: 0.8,
-    });
-    
-    const scene = parseSceneResponse(response);
-    cache.set(cacheKey, scene);
-    return scene;
-  } catch (error) {
-    return fallbackSceneGenerator(context);
-  }
-}
-```
-
-### Image Generation
-```typescript
-// Queue image requests to respect rate limits
-// Generate placeholder while waiting
-// Store images with scene ID
-// Implement retry with different prompts on failure
-```
-
-## Game Flow Implementation
-
-### Scene Transition Flow
-1. Player selects choice
-2. Show dice rolling animation
-3. Calculate result with modifiers
-4. Fade out current scene
-5. Generate next scene (show loading state)
-6. Request image generation (async)
-7. Fade in new scene
-8. Update story scroll
-9. Check for level up/game over conditions
-
-### Combat Encounters
-```typescript
-// Simplified combat:
-// - Initiative: Single d20 roll determines who goes first
-// - Actions: Attack, Defend (+2 AC), Special Ability, Flee
-// - Enemy AI: Simple behavior trees based on HP thresholds
-// - Victory: XP, loot table roll, story continuation
-```
-
-## Error Handling & Edge Cases
-
-### API Failures
-```typescript
-// Always have fallbacks:
-const fallbacks = {
-  scene: generateLocalScene,        // Pre-written scenes
-  image: getPlaceholderImage,       // Genre-appropriate stock images
-  choice: getDefaultChoices,        // Generic "continue" options
-};
-```
-
-### Save System
-```typescript
-// Auto-save after each decision
-// Store in localStorage with versioning
-// Cloud sync optional (Firebase/Supabase)
-// Export/import JSON save files
-```
-
-## Performance Optimizations
-
-### Critical Rendering Path
-1. Load character data first
-2. Render UI skeleton
-3. Fetch current scene
-4. Load images async
-5. Preload next possible scenes
-
-### Bundle Optimization
-```javascript
-// Lazy load heavy components:
-const StoryScroll = lazy(() => import('./StoryScroll'));
-const CharacterSheet = lazy(() => import('./CharacterSheet'));
-```
-
-## Testing Scenarios
-
-### Key Test Cases
-1. **Character Creation**: All classes properly initialized
-2. **Dice Rolling**: Modifiers correctly applied
-3. **Story Continuity**: Choices affect future scenes
-4. **Edge Cases**: 
-   - Death handling
-   - Level 10 cap
-   - Empty inventory
-   - Network offline
-5. **Save/Load**: State persistence across sessions
-
-### Automated Testing
-```typescript
-// Test utilities:
-mockDiceRoll(20); // Force critical success
-mockAPIResponse(testScene); // Predictable scenes
-testDecisionPath(['choice1', 'choice2', 'choice3']); // Test sequences
-```
-
-## Deployment Checklist
-
-### Environment Variables
-```env
-VITE_CLAUDE_API_KEY=
-VITE_IMAGE_API_KEY=
-VITE_API_BASE_URL=
-VITE_ENABLE_ANALYTICS=
-```
-
-### Pre-deployment
-- [ ] API keys secured
-- [ ] Error tracking configured (Sentry)
-- [ ] Analytics setup (optional)
-- [ ] Performance monitoring
-- [ ] Content moderation rules
-- [ ] Rate limiting configured
-- [ ] CORS properly set
-- [ ] Image CDN configured
-
-## Common Pitfalls to Avoid
-
-1. **Don't block UI on API calls** - Always show loading states
-2. **Don't trust AI output** - Validate and sanitize all responses
-3. **Don't store sensitive data client-side** - Use secure backend
-4. **Don't ignore mobile users** - Responsive design from start
-5. **Don't overcomplicate D&D rules** - Keep it simple and fun
-
-## Accessibility Requirements
-
-- Keyboard navigation for all interactions
-- Screen reader support for story text
-- High contrast mode option
-- Adjustable text size
-- Alternative text for all images
-- Dice roll results in text (not just visual)
-
-## Future Enhancement Ideas
-
-1. **Multiplayer Mode**: Party-based adventures
-2. **Custom Campaigns**: User-created story modules
-3. **Voice Narration**: TTS for scene descriptions
-4. **Character Portraits**: AI-generated character art
-5. **Achievements**: Unlock new classes/abilities
-6. **Mod Support**: Custom rules and content
-
-## Quick Reference
-
-### D&D 5e Ability Scores
-- **STR**: Athletics, melee attacks
-- **DEX**: Acrobatics, stealth, initiative
-- **CON**: HP, concentration, endurance
-- **INT**: Investigation, arcana, history
-- **WIS**: Perception, insight, survival
-- **CHA**: Persuasion, deception, performance
-
-### Difficulty Classes
-- **Very Easy**: DC 5
-- **Easy**: DC 10
-- **Medium**: DC 15
-- **Hard**: DC 20
-- **Very Hard**: DC 25
-- **Nearly Impossible**: DC 30
-
-### Character Archetypes
-1. **Fighter**: +2 STR, proficiency in athletics, intimidation
-2. **Rogue**: +2 DEX, proficiency in stealth, sleight of hand
-3. **Wizard**: +2 INT, proficiency in arcana, investigation
-4. **Cleric**: +2 WIS, proficiency in medicine, religion
-
-## Development Commands
-
-```bash
-# Initial setup
-npm create vite@latest dnd-adventure -- --template react-ts
-npm install zustand framer-motion axios tailwindcss
-
-# Development
-npm run dev
-
-# Testing
-npm run test
-npm run test:e2e
-
-# Build
-npm run build
-npm run preview
-
-# Deployment
-npm run deploy
-```
-
-Remember: The goal is to create an immersive, fun experience that captures the magic of D&D while being accessible to solo players. Keep the interface intuitive, the story engaging, and the dice rolls exciting!
+This comprehensive system creates truly personalized D&D adventures that evolve based on player choices and maintain narrative continuity through the sophisticated keyword system!
