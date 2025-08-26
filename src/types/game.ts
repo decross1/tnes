@@ -8,8 +8,12 @@ export interface Character {
     current: number;
     max: number;
   };
+  armorClass: number;
+  proficiencyBonus: number;
   inventory: Item[];
   spells?: Spell[];
+  backstory?: string;
+  portraitUrl?: string;
 }
 
 export interface AbilityScores {
@@ -82,6 +86,7 @@ export interface GameState {
 export interface UIState {
   isLoading: boolean;
   showCharacterSheet: boolean;
+  showCharacterDetails: boolean;
   showStoryScroll: boolean;
   showSettings: boolean;
   theme: 'light' | 'dark';
@@ -100,6 +105,7 @@ export interface CharacterClass {
   proficiencies: string[];
   hitDie: number;
   startingHp: number;
+  description: string;
 }
 
 export interface Item {

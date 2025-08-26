@@ -311,10 +311,35 @@ git commit -m "msg"     # Commit with message
 git push origin feature/ai-integration  # Push to feature branch
 
 # Environment Setup
-# Add your API keys to .env file:
-# VITE_CLAUDE_API_KEY=your_claude_key_here
-# VITE_OPENAI_API_KEY=your_dalle_key_here (for DALL-E)
-# VITE_STABILITY_API_KEY=your_stability_key_here (for Stable Diffusion)
+
+## API Keys Configuration
+The app requires AI service API keys for full functionality. Copy `.env.example` to `.env` and add your API keys:
+
+```bash
+cp .env.example .env
+```
+
+### Required API Keys
+Add the following to your `.env` file:
+
+```bash
+# Claude API for backstory and story generation
+VITE_CLAUDE_API_KEY=your_claude_api_key_here
+
+# Image Generation APIs (choose one or both)
+VITE_OPENAI_API_KEY=your_openai_api_key_here        # For DALL-E 3
+VITE_STABILITY_API_KEY=your_stability_api_key_here  # For Stable Diffusion
+```
+
+### API Key Sources:
+- **Claude API**: Get your key from [Anthropic Console](https://console.anthropic.com/)
+- **OpenAI API**: Get your key from [OpenAI Platform](https://platform.openai.com/api-keys)
+- **Stability AI**: Get your key from [Stability AI Platform](https://platform.stability.ai/)
+
+### Fallback Behavior:
+- Without Claude API: Uses placeholder backstories
+- Without image APIs: Shows default character portraits
+- App functions without any API keys but with limited AI features
 ```
 
 ## 🧪 TESTING SCENARIOS

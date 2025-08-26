@@ -17,7 +17,7 @@ class ClaudeApiService {
   private baseUrl: string = 'https://api.anthropic.com';
 
   constructor() {
-    this.apiKey = import.meta.env.VITE_CLAUDE_API_KEY || '';
+    this.apiKey = (import.meta as any).env?.VITE_CLAUDE_API_KEY || '';
     if (!this.apiKey) {
       console.warn('Claude API key not found. Set VITE_CLAUDE_API_KEY in your .env file.');
     }

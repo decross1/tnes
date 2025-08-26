@@ -28,6 +28,20 @@ import type {
 import { createCharacter } from '../utils/character';
 import { generateUniqueId } from '../utils/game';
 
+// Campaign Management
+interface CampaignSlot {
+  id: string;
+  character?: Character;
+  campaign?: {
+    id: string;
+    name: string;
+    createdAt: Date;
+    lastPlayed: Date;
+  };
+  isEmpty: boolean;
+  gameState?: ExtendedGameState;
+}
+
 // Extended Game State
 interface ExtendedGameState extends GameState {
   // Character Creation
@@ -35,6 +49,17 @@ interface ExtendedGameState extends GameState {
   
   // Campaign Setup
   campaign: CampaignSetup;
+  
+  // Campaign Management
+  campaigns: {
+    slots: CampaignSlot[];
+    currentSlot: string | null;
+    showCampaignManager: boolean;
+  };
+
+  // App Navigation
+  currentScreen: 'mainMenu' | 'game';
+  isInCampaign: boolean;
   
   // Keyword Management
   keywordManager: {
@@ -87,6 +112,18 @@ interface ExtendedGameActions {
   // Story Arc actions
   updateStoryArc: (update: Partial<ExtendedGameState['storyArc']>) => void;
   addPlotPoint: (plotPoint: PlotPoint) => void;
+  
+  // Campaign Management actions
+  showCampaignManager: () => void;
+  hideCampaignManager: () => void;
+  createNewCampaign: () => void;
+  loadCampaign: (slotId: string) => void;
+  deleteCampaign: (slotId: string) => void;
+  saveCampaignToSlot: (slotId: string) => void;
+  
+  // Navigation actions
+  goToMainMenu: () => void;
+  goToGame: () => void;
 }
 
 const initialCharacterCreation: CharacterCreationState = {
@@ -97,6 +134,20 @@ const initialCharacterCreation: CharacterCreationState = {
 const initialCampaign: CampaignSetup = {
   mode: 'guided',
   isSetup: false
+};
+
+const initialCampaigns = {
+  slots: [
+    { id: 'slot-1', isEmpty: true },
+    { id: 'slot-2', isEmpty: true }
+  ] as CampaignSlot[],
+  currentSlot: null as string | null,
+  showCampaignManager: false
+};
+
+const initialAppState = {
+  currentScreen: 'mainMenu' as const,
+  isInCampaign: false
 };
 
 const initialKeywordManager = {
@@ -139,6 +190,7 @@ const initialScene: Scene = {
 const initialUIState: UIState = {
   isLoading: false,
   showCharacterSheet: false,
+  showCharacterDetails: false,
   showStoryScroll: false,
   showSettings: false,
   theme: 'dark',
@@ -166,6 +218,9 @@ const useGameStore = create<ExtendedGameState & ExtendedGameActions>()(
         // Extended State
         characterCreation: initialCharacterCreation,
         campaign: initialCampaign,
+        campaigns: initialCampaigns,
+        currentScreen: initialAppState.currentScreen,
+        isInCampaign: initialAppState.isInCampaign,
         keywordManager: initialKeywordManager,
         storyArc: initialStoryArc,
 
@@ -253,14 +308,50 @@ const useGameStore = create<ExtendedGameState & ExtendedGameActions>()(
             portraitUrl
           };
 
-          set((state) => ({
-            character: enhancedCharacter,
-            characterCreation: {
-              ...state.characterCreation,
-              isActive: false
-            },
-            saveData: { ...state.saveData, lastSaved: new Date() }
-          }));
+          set((state) => {
+            // Find empty slot and save the campaign
+            const emptySlot = state.campaigns.slots.find(s => s.isEmpty);
+            const updatedSlots = emptySlot 
+              ? state.campaigns.slots.map(slot =>
+                  slot.id === emptySlot.id
+                    ? {
+                        id: slot.id,
+                        isEmpty: false,
+                        character: enhancedCharacter,
+                        campaign: {
+                          id: generateUniqueId(),
+                          name: `${enhancedCharacter.name}'s Adventure`,
+                          createdAt: new Date(),
+                          lastPlayed: new Date()
+                        },
+                        gameState: {
+                          ...state,
+                          character: enhancedCharacter,
+                          characterCreation: { isActive: false, step: 'class' as const },
+                          currentScreen: 'game' as const,
+                          isInCampaign: true
+                        }
+                      }
+                    : slot
+                )
+              : state.campaigns.slots;
+
+            return {
+              character: enhancedCharacter,
+              characterCreation: {
+                ...state.characterCreation,
+                isActive: false
+              },
+              campaigns: {
+                ...state.campaigns,
+                currentSlot: emptySlot?.id || null,
+                slots: updatedSlots
+              },
+              currentScreen: 'game' as const,
+              isInCampaign: true,
+              saveData: { ...state.saveData, lastSaved: new Date() }
+            };
+          });
         },
 
         // Campaign Setup Actions
@@ -384,6 +475,108 @@ const useGameStore = create<ExtendedGameState & ExtendedGameActions>()(
               ...state.storyArc,
               plotPoints: [...state.storyArc.plotPoints, plotPoint]
             }
+          })),
+
+        // Campaign Management Actions
+        showCampaignManager: () =>
+          set((state) => ({
+            campaigns: {
+              ...state.campaigns,
+              showCampaignManager: true
+            }
+          })),
+
+        hideCampaignManager: () =>
+          set((state) => ({
+            campaigns: {
+              ...state.campaigns,
+              showCampaignManager: false
+            }
+          })),
+
+        createNewCampaign: () =>
+          set((state) => {
+            // Start character creation and stay on main menu
+            return {
+              campaigns: {
+                ...state.campaigns,
+                showCampaignManager: false
+              },
+              characterCreation: {
+                isActive: true,
+                step: 'class'
+              },
+              currentScreen: 'mainMenu' as const
+            };
+          }),
+
+        loadCampaign: (slotId) =>
+          set((state) => {
+            const slot = state.campaigns.slots.find(s => s.id === slotId);
+            if (slot && slot.gameState) {
+              return {
+                ...slot.gameState,
+                campaigns: {
+                  ...state.campaigns,
+                  currentSlot: slotId,
+                  showCampaignManager: false
+                },
+                currentScreen: 'game' as const,
+                isInCampaign: true
+              };
+            }
+            return state;
+          }),
+
+        deleteCampaign: (slotId) =>
+          set((state) => ({
+            campaigns: {
+              ...state.campaigns,
+              slots: state.campaigns.slots.map(slot =>
+                slot.id === slotId ? { id: slot.id, isEmpty: true } : slot
+              ),
+              currentSlot: state.campaigns.currentSlot === slotId ? null : state.campaigns.currentSlot
+            }
+          })),
+
+        saveCampaignToSlot: (slotId) =>
+          set((state) => {
+            const currentState = { ...state };
+            return {
+              campaigns: {
+                ...state.campaigns,
+                currentSlot: slotId,
+                slots: state.campaigns.slots.map(slot =>
+                  slot.id === slotId
+                    ? {
+                        id: slot.id,
+                        isEmpty: false,
+                        character: state.character,
+                        campaign: {
+                          id: generateUniqueId(),
+                          name: `${state.character.name}'s Adventure`,
+                          createdAt: new Date(),
+                          lastPlayed: new Date()
+                        },
+                        gameState: currentState
+                      }
+                    : slot
+                )
+              }
+            };
+          }),
+
+        // Navigation Actions
+        goToMainMenu: () =>
+          set((state) => ({
+            currentScreen: 'mainMenu' as const,
+            isInCampaign: false
+          })),
+
+        goToGame: () =>
+          set((state) => ({
+            currentScreen: 'game' as const,
+            isInCampaign: true
           }))
       }),
       {

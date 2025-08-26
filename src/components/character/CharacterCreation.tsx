@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CHARACTER_CLASSES, BACKSTORY_OPTIONS, type CharacterCreationState, type BackstoryMethod } from '../../types/character';
+import { CHARACTER_CLASSES, type CharacterCreationState, type BackstoryMethod } from '../../types/character';
 import { claudeApi } from '../../services/claudeApi';
 import { imageApi } from '../../services/imageApi';
 import ClassSelection from './ClassSelection';

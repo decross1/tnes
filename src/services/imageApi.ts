@@ -23,8 +23,8 @@ class ImageApiService {
   private preferredProvider: 'dalle' | 'stability';
 
   constructor() {
-    this.openaiApiKey = import.meta.env.VITE_OPENAI_API_KEY || '';
-    this.stabilityApiKey = import.meta.env.VITE_STABILITY_API_KEY || '';
+    this.openaiApiKey = (import.meta as any).env?.VITE_OPENAI_API_KEY || '';
+    this.stabilityApiKey = (import.meta as any).env?.VITE_STABILITY_API_KEY || '';
     
     // Prefer DALL-E if available, fallback to Stability AI
     this.preferredProvider = this.openaiApiKey ? 'dalle' : 'stability';
