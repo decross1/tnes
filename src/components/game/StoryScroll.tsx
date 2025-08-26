@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import type { Decision } from '../types';
+import type { Decision } from '../../types';
 
 interface StoryScrollProps {
   decisions: Decision[];

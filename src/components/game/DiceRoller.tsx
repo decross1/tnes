@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import type { DiceRoll, AbilityCheck, Character } from '../types';
-import { performAbilityCheck, formatAbilityName, isCritical } from '../utils/game';
+import type { DiceRoll, AbilityCheck, Character } from '../../types';
+import { performAbilityCheck, formatAbilityName, isCritical } from '../../utils/game';
 
 interface DiceRollerProps {
   character: Character;

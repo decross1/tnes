@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import type { Scene } from '../types';
+import type { Scene } from '../../types';
 
 interface SceneDisplayProps {
   scene: Scene;
