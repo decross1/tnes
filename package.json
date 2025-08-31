@@ -4,10 +4,11 @@
   "description": "",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "preview": "vite preview"
+    "setup-node": "./scripts/setup-node.sh",
+    "dev": "./scripts/setup-node.sh && vite",
+    "build": "./scripts/setup-node.sh && tsc && vite build",
+    "lint": "./scripts/setup-node.sh && eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "preview": "./scripts/setup-node.sh && vite preview"
   },
   "keywords": [],
   "author": "",

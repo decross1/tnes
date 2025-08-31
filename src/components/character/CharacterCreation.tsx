@@ -6,6 +6,7 @@ import { imageApi } from '../../services/imageApi';
 import ClassSelection from './ClassSelection';
 import BackstoryGenerator from './BackstoryGenerator';
 import PortraitGenerator from './PortraitGenerator';
+import { PromptDebugger } from '../dev/PromptDebugger';
 
 interface CharacterCreationProps {
   onComplete: (character: {
@@ -268,6 +269,24 @@ export default function CharacterCreation({ onComplete, onCancel }: CharacterCre
               ) : 'Next'}
             </button>
           </div>
+          
+          {/* Development Only: Prompt Debugger */}
+          {process.env.NODE_ENV === 'development' && characterName && selectedClass && (
+            <div style={{ textAlign: 'center', marginTop: '16px' }}>
+              <PromptDebugger
+                characterClass={selectedClass as any}
+                characterName={characterName}
+                userKeywords={['scarred', 'battle-worn', 'determined', 'heavy armor']} // Mock visual keywords for now
+                backstoryKeywords={backstoryKeywords}
+                campaignTone="heroic"
+                method={
+                  backstoryMethod === 'keywords' ? 'keywords' : 
+                  backstoryMethod === 'ai-generate' ? 'full' : 
+                  'class-based'
+                }
+              />
+            </div>
+          )}
         </div>
 
         {/* Portrait Preview */}
