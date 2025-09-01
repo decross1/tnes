@@ -77,7 +77,7 @@ class ClaudeApiService {
       console.error('❌ Claude API request failed through proxy:', error);
       
       // Check if backend is running
-      if (error.message.includes('fetch')) {
+      if (error instanceof Error && error.message.includes('fetch')) {
         console.error('🚨 Backend proxy appears to be down!');
         console.error('💡 Start backend: cd server && npm run dev');
         throw new Error('Backend proxy server is not running. Please start: cd server && npm run dev');

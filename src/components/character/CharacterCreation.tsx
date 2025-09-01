@@ -92,7 +92,7 @@ export default function CharacterCreation({ onComplete, onCancel }: CharacterCre
         
         const backstoryResult = await claudeApi.generateCharacterBackstory({
           characterName,
-          characterClass: selectedClass,
+          characterClass: selectedClass as 'Fighter' | 'Rogue' | 'Wizard' | 'Cleric',
           keywords: backstoryMethod === 'keywords' ? backstoryKeywords : undefined,
           method,
           campaignTone: undefined, // TODO: Add campaign tone from campaign setup

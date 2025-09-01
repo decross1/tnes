@@ -62,7 +62,7 @@ export interface PortraitGenerationResponse {
 export interface BackstoryGenerationRequest {
   characterClass: 'Fighter' | 'Rogue' | 'Wizard' | 'Cleric';
   characterName: string;
-  method: 'full' | 'keywords' | 'class-based';
+  method: 'full' | 'keywords' | 'class-based' | 'custom-write';
   keywords?: string[];
   campaignTone?: 'dark' | 'heroic' | 'comedic' | 'gritty';
   wordLimit?: number;
