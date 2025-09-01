@@ -1,7 +1,17 @@
 # Claude.md - D&D Solo Adventure App Development Guide
 
-## Project Status: SCAFFOLDING COMPLETE ✅ → CHARACTER DESIGN WORKFLOW 🎭
-**Current Phase**: Basic app structure completed, now implementing character design workflow with AI-powered portrait generation and campaign management
+## 🚨 DEVELOPMENT PHILOSOPHY: NO MOCK SOLUTIONS
+**CRITICAL PRINCIPLE**: Always solve technical issues with real implementations, not mocks or workarounds.
+- **Database issues**: Use real databases (SQLite, PostgreSQL, etc.)
+- **API issues**: Create proper backend proxies/services 
+- **CORS issues**: Implement backend solutions, not browser workarounds
+- **Authentication**: Real auth systems, not placeholder tokens
+- **Testing**: Use real APIs with proper error handling and fallbacks
+
+**Rationale**: Mocks hide real-world complexity and integration challenges. Build production-ready architecture from day one.
+
+## Project Status: CHARACTER DESIGN WORKFLOW COMPLETE ✅ → BACKEND PROXY COMPLETE ✅
+**Current Phase**: Character design workflow with AI-powered backstory generation complete, backend proxy server implemented for real Claude API integration
 
 ## Project Context
 You are helping build a dynamic choose-your-own-adventure D&D game where:
@@ -14,7 +24,7 @@ You are helping build a dynamic choose-your-own-adventure D&D game where:
 - Campaign cards display character portraits and current progress
 - In-game character profiles provide complete character sheets
 
-## ✅ COMPLETED FEATURES (v0.1.0)
+## ✅ COMPLETED FEATURES (v0.2.0)
 
 ### Core Infrastructure
 - ✅ Vite + React + TypeScript project setup
@@ -25,6 +35,30 @@ You are helping build a dynamic choose-your-own-adventure D&D game where:
 - ✅ Complete TypeScript type definitions
 - ✅ Git repository with main branch pushed to GitHub
 
+### Backend Architecture (NEW ✅)
+- ✅ **Express Proxy Server**: Production-ready backend on port 3001
+- ✅ **CORS Resolution**: Proper cross-origin request handling
+- ✅ **API Key Security**: Server-side Claude API key management
+- ✅ **Request Logging**: Comprehensive request/response visibility
+- ✅ **Error Handling**: User-friendly error messages and fallbacks
+- ✅ **Health Monitoring**: `/health` endpoint for status checks
+
+### AI Integration (NEW ✅)
+- ✅ **Real Claude API**: Live integration through backend proxy
+- ✅ **Dynamic Prompt System**: Context-aware prompt generation
+- ✅ **Keyword Integration**: Structured keyword incorporation into prompts
+- ✅ **Conditional API Calling**: Smart API usage based on user input method
+- ✅ **Backstory Generation**: Multiple generation methods (AI, keywords, custom, skip)
+- ✅ **Request Tracing**: Full workflow logging for debugging
+
+### Character Creation System (NEW ✅)
+- ✅ **Multi-Step Flow**: Class → Name → Backstory → Portrait
+- ✅ **Four Generation Methods**: AI Generate, Keywords, Custom Write, Skip
+- ✅ **Keyword Input System**: Tag-based keyword entry with suggestions
+- ✅ **Backstory Generator**: Dynamic prompt-based AI content generation
+- ✅ **Portrait Generation**: Character portrait with loading states
+- ✅ **Campaign Management**: Multi-slot save/load system
+
 ### Game Mechanics
 - ✅ D&D 5e ability score system
 - ✅ Proper modifier calculations: `Math.floor((ability - 10) / 2)`
@@ -33,12 +67,16 @@ You are helping build a dynamic choose-your-own-adventure D&D game where:
 - ✅ Critical success/failure detection (Natural 20/1)
 - ✅ Four character classes: Fighter, Rogue, Wizard, Cleric
 
-### UI Components (Existing)
+### UI Components
 - ✅ **SceneDisplay**: Story rendering with image support
 - ✅ **ChoiceButtons**: Interactive choices with ability check indicators  
 - ✅ **DiceRoller**: Animated 3D dice with proper D&D mechanics
 - ✅ **StoryScroll**: Adventure history with filtering and search
 - ✅ **Character Stats**: Real-time ability scores and HP tracking
+- ✅ **CharacterCreation**: Complete multi-step character creation flow
+- ✅ **BackstoryGenerator**: Multiple generation methods with UI
+- ✅ **KeywordInput**: Tag-based input with suggestions
+- ✅ **PortraitGenerator**: Character portrait generation with states
 
 ### Styling & UX
 - ✅ Fantasy-themed UI with parchment backgrounds
@@ -48,7 +86,7 @@ You are helping build a dynamic choose-your-own-adventure D&D game where:
 - ✅ Smooth animations and transitions
 - ✅ Loading states and error handling
 
-## 🎭 CHARACTER DESIGN WORKFLOW (IN DEVELOPMENT)
+## 🎭 CHARACTER DESIGN WORKFLOW (COMPLETE ✅)
 
 ### Game Initialization Flow
 ```
@@ -266,34 +304,45 @@ interface ExtendedGameState extends GameState {
 
 ## 🚀 DEVELOPMENT ROADMAP
 
-### Phase 1: Character Design Workflow (CURRENT SPRINT)
-- 🟡 **CharacterKeywordInput** component with visual descriptor categories
-- 🟡 **PortraitService** with Claude prompt generation and Stable Diffusion/DALL-E
-- 🟡 **CampaignCard** component for campaign selection/continuation
-- 🟡 **CharacterProfileModal** for in-game character sheets
-- 🟡 **CharacterCreation** enhanced with visual keyword step
-- 🟡 **BackstoryGenerator** with AI integration and keyword support
-- 🟡 **CampaignSetup** component with tone/location selection
-- 🟡 **Extended GameStore** with character design state
+### ✅ Phase 1: Character Design Workflow & Backend (COMPLETE)
+- ✅ **Express Backend Proxy**: CORS resolution and API key security
+- ✅ **Real Claude API Integration**: Live AI calls through backend
+- ✅ **CharacterCreation**: Multi-step creation flow complete
+- ✅ **BackstoryGenerator**: AI/manual/keyword/skip generation methods
+- ✅ **KeywordInput**: Tag-based keyword system with suggestions
+- ✅ **Dynamic Prompt System**: Context-aware AI prompt generation
+- ✅ **Campaign Management**: Multi-slot save/load system
+- ✅ **Portrait Generation**: Character portrait with loading states
 
-### Phase 2: AI Story Generation (NEXT)
-- 🟡 Scene generation with keyword integration
-- 🟡 Binary choice generation system
-- 🟡 Outcome generation based on dice rolls
-- 🟡 Dynamic keyword extraction from player actions
-- 🟡 Story arc progression tracking
+### 🎯 Phase 2: AI Story Generation (CURRENT FOCUS)
+- 🟡 **Scene Generation**: Dynamic story content with keyword integration
+- 🟡 **Binary Choice System**: D&D-style decision points with ability checks
+- 🟡 **Dice Roll Integration**: Outcome generation based on roll results
+- 🟡 **Dynamic Keyword Extraction**: Auto-extract keywords from player actions
+- 🟡 **Story Arc Tracking**: Progression through introduction/rising/climax/resolution
+- 🟡 **Campaign Keywords**: Three-tier keyword weighting system
 
-### Phase 3: Advanced Features
-- 🟡 Character progression and leveling
-- 🟡 Combat encounter system
-- 🟡 Advanced relationship tracking
-- 🟡 Campaign templates and presets
+### Phase 3: Game Mechanics Enhancement
+- 🟡 **Visual Keyword Integration**: Character portrait keyword system
+- 🟡 **Campaign Setup UI**: Tone/location/mode selection interface
+- 🟡 **Character Profile Modal**: In-game character sheet overlay
+- 🟡 **Campaign Cards**: Visual campaign selection with progress
+- 🟡 **Image Generation**: Scene and character portrait AI generation
+- 🟡 **Game Screen**: Replace placeholder with full gameplay interface
 
-### Phase 4: Polish & Deployment
-- 🟡 Sound effects and audio
-- 🟡 Advanced image generation
-- 🟡 Performance optimization
-- 🟡 Deployment and hosting
+### Phase 4: Advanced Features
+- 🟡 **Character Progression**: Level advancement and ability increases
+- 🟡 **Combat Encounters**: Turn-based combat system
+- 🟡 **Relationship Tracking**: NPC relationship and reputation systems
+- 🟡 **Campaign Templates**: Pre-built adventure scenarios
+- 🟡 **Quest System**: Main and side quest tracking
+
+### Phase 5: Polish & Production
+- 🟡 **Sound Design**: Music and sound effects
+- 🟡 **Advanced AI**: GPT-4 integration for enhanced generation
+- 🟡 **Performance**: Optimization for large campaigns
+- 🟡 **Deployment**: Production hosting and CI/CD
+- 🟡 **Mobile Optimization**: Touch-friendly interface improvements
 
 ## 🛠️ NEW COMPONENTS TO BUILD
 
@@ -354,48 +403,74 @@ interface ExtendedGameState extends GameState {
 - Preview and editing capabilities
 - Integration with keyword system
 
-## 📁 UPDATED FILE STRUCTURE
+## 📁 CURRENT FILE STRUCTURE (v0.2.0)
 ```
-src/
-├── components/
-│   ├── character/          # 🟡 NEW: Character creation & design components
-│   │   ├── CharacterCreation.tsx     # Enhanced with visual keywords
-│   │   ├── CharacterKeywordInput.tsx # NEW: Visual descriptors
-│   │   ├── CharacterProfileModal.tsx # NEW: In-game character sheet
-│   │   ├── CharacterProfileButton.tsx # NEW: Modal trigger
-│   │   ├── ClassSelection.tsx
-│   │   ├── BackstoryGenerator.tsx
-│   │   └── PortraitDisplay.tsx       # NEW: Reusable portraits
-│   ├── campaign/           # 🟡 NEW: Campaign setup & management
-│   │   ├── CampaignSetup.tsx
-│   │   ├── CampaignCard.tsx          # NEW: Campaign cards
-│   │   ├── KeywordInput.tsx          # For backstory keywords
-│   │   └── ToneSelector.tsx
-│   ├── game/              # ✅ EXISTING: Game components
-│   │   ├── SceneDisplay.tsx
-│   │   ├── ChoiceButtons.tsx
-│   │   ├── DiceRoller.tsx
-│   │   └── StoryScroll.tsx
-├── services/              # 🟡 NEW: API integration
-│   ├── ai/               # NEW: AI service organization
-│   │   ├── claudeApi.ts
-│   │   ├── portraitService.ts        # NEW: Portrait generation
-│   │   └── portraitPromptService.ts  # NEW: Claude prompt generation
-│   ├── imageApi.ts       # Stable Diffusion/DALL-E
-│   └── fallbackContent.ts
-├── stores/                # ✅ EXISTING + Extensions
-│   ├── gameStore.ts       # Extended with character design
-│   └── keywordManager.ts  # 🟡 NEW: Keyword management
-├── types/                 # ✅ EXISTING + Extensions
-│   ├── character.ts       # Extended with design types
-│   ├── campaign.ts        # 🟡 NEW: Campaign types
-│   ├── portrait.ts        # NEW: Portrait generation types
-│   └── keywords.ts        # 🟡 NEW: Keyword system types
-├── utils/                 # ✅ EXISTING + Extensions
-│   ├── character.ts       # Extended with creation utilities
-│   ├── prompts.ts         # 🟡 NEW: AI prompt templates
-│   ├── portraitUtils.ts   # NEW: Portrait processing
-│   └── keywordUtils.ts    # 🟡 NEW: Keyword processing
+tnes/                      # 🎯 PROJECT ROOT
+├── frontend/              # 📱 FRONTEND (React/Vite)
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── character/      # ✅ Character creation & design components
+│   │   │   │   ├── CharacterCreation.tsx     # Multi-step creation flow
+│   │   │   │   ├── BackstoryGenerator.tsx    # AI/manual backstory generation
+│   │   │   │   ├── ClassSelection.tsx        # D&D class selection
+│   │   │   │   ├── PortraitGenerator.tsx     # Character portrait display
+│   │   │   │   └── CharacterDetailsModal.tsx # Character sheet modal
+│   │   │   ├── campaign/       # ✅ Campaign setup & management
+│   │   │   │   ├── CampaignManager.tsx       # Multi-slot campaign system
+│   │   │   │   └── KeywordInput.tsx          # Tag-based keyword input
+│   │   │   ├── game/           # ✅ Core game components
+│   │   │   │   ├── SceneDisplay.tsx          # Story scene rendering
+│   │   │   │   ├── ChoiceButtons.tsx         # Decision point interactions
+│   │   │   │   ├── DiceRoller.tsx            # D&D dice mechanics
+│   │   │   │   ├── StoryScroll.tsx           # Adventure history
+│   │   │   │   ├── SceneCard.tsx             # Scene display cards
+│   │   │   │   └── CampaignTimeline.tsx      # Campaign progression
+│   │   │   ├── screens/        # ✅ Main screen components
+│   │   │   │   ├── MainMenuScreen.tsx        # Campaign selection
+│   │   │   │   └── GameScreen.tsx            # Active gameplay
+│   │   │   └── dev/            # ✅ Development tools
+│   │   │       ├── APITestRunner.tsx         # API testing interface
+│   │   │       └── PromptDebugger.tsx        # AI prompt debugging
+│   │   ├── services/           # ✅ API integration layer
+│   │   │   ├── claudeApi.ts              # Claude AI integration (proxy)
+│   │   │   ├── imageApi.ts               # Image generation services
+│   │   │   ├── testCharacterGeneration.ts    # Testing utilities
+│   │   │   └── testCharacterGenerationMock.ts # Mock responses
+│   │   ├── stores/             # ✅ State management
+│   │   │   └── gameStore.ts              # Zustand game state
+│   │   ├── types/              # ✅ TypeScript definitions
+│   │   │   ├── index.ts                  # Core game types
+│   │   │   ├── character.ts              # Character creation types
+│   │   │   ├── campaign.ts               # Campaign management types
+│   │   │   ├── game.ts                   # Game mechanics types
+│   │   │   ├── keywords.ts               # Keyword system types
+│   │   │   └── api.ts                    # API response types
+│   │   ├── utils/              # ✅ Utility functions
+│   │   │   ├── character.ts              # Character creation utilities
+│   │   │   └── game.ts                   # Game mechanics utilities
+│   │   ├── hooks/              # ✅ Custom React hooks
+│   │   ├── assets/             # ✅ Static assets
+│   │   ├── App.tsx             # ✅ Main application component
+│   │   ├── main.tsx            # ✅ React entry point
+│   │   └── index.css           # ✅ Global styles
+│   ├── public/                 # ✅ Static assets
+│   │   └── images/             # Game assets
+│   ├── package.json            # ✅ Frontend dependencies
+│   ├── vite.config.ts          # ✅ Vite configuration
+│   └── tsconfig.json           # ✅ TypeScript configuration
+├── server/                     # 🚀 BACKEND (Express/Node.js) - NEW!
+│   ├── server.js               # ✅ Express proxy server
+│   ├── package.json            # ✅ Backend dependencies
+│   └── README.md               # ✅ Backend documentation
+├── scripts/                    # ✅ Development scripts
+│   └── setup-node.sh           # Node.js version management
+├── .env                        # ✅ Environment variables (API keys)
+├── .env.example                # ✅ Environment template
+├── start-dev.sh                # ✅ Development startup script - NEW!
+├── claude.md                   # ✅ Development guide (this file)
+├── DEVELOPMENT_STANDARDS.md    # ✅ Coding standards
+├── game-workflow-design.md     # ✅ Game design document
+└── README.md                   # ✅ Project documentation
 ```
 
 ## 🎯 EXAMPLE CHARACTER DESIGN FLOW
@@ -435,29 +510,68 @@ const PORTRAIT_PROMPTS = {
 
 ## 🔧 Development Commands
 
-### Node.js Version Management
-All development commands automatically switch to Node.js 22 via NVM. The setup script ensures compatibility.
+### 🚀 Quick Start (Recommended)
+```bash
+# Start both frontend and backend servers
+./start-dev.sh
 
+# Access the application
+# Frontend: http://localhost:5173
+# Backend:  http://localhost:3001
+# Health:   http://localhost:3001/health
+```
+
+### 🔄 Manual Development Setup
+```bash
+# Option 1: Start both servers manually (2 terminals)
+
+# Terminal 1 - Backend Proxy Server
+cd server
+source ~/.nvm/nvm.sh && nvm use 22
+npm run dev              # Starts backend on http://localhost:3001
+
+# Terminal 2 - Frontend Development Server  
+source ~/.nvm/nvm.sh && nvm use 22
+npm run dev              # Starts frontend on http://localhost:5173
+```
+
+### 🏗️ Individual Commands
 ```bash
 # Node.js Setup (automatic with all commands)
-npm run setup-node     # Manually switch to Node.js 22
+npm run setup-node      # Manually switch to Node.js 22
 
-# Development (WORKING)
-npm run dev              # Auto-switches to Node 22, starts on http://localhost:5173/
+# Frontend Only
+npm run dev              # Start frontend development server (requires backend for full functionality)
+npm run build            # Build production frontend
+npm run lint             # Run ESLint on frontend code
 
-# Build (WORKING) 
-npm run build           # Auto-switches to Node 22, TypeScript compilation + Vite build
+# Backend Only  
+cd server && npm run dev # Start backend proxy server
 
-# Linting
-npm run lint            # Auto-switches to Node 22, runs ESLint
+# Health Checks
+curl http://localhost:3001/health  # Test backend health
+curl http://localhost:5173         # Test frontend availability
+```
 
-# Git workflow
-git status              # Check current changes
-git add .               # Stage changes
-git commit -m "msg"     # Commit with message
-git push origin feature/character-design-workflow  # Push to current feature branch
+### 🔧 Architecture Overview
+```
+Development Environment:
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Frontend      │───▶│   Backend       │───▶│   Claude API    │
+│   :5173         │    │   Proxy :3001   │    │   Anthropic     │
+│   React/Vite    │    │   Express/Node  │    │   api.anthropic │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+```
 
-# Environment Setup
+### 🌐 Git Workflow
+```bash
+git status               # Check current changes
+git add .                # Stage changes
+git commit -m "message"  # Commit with message
+git push origin main     # Push to main branch
+```
+
+### 📋 Environment Setup
 
 ## API Keys Configuration
 The app requires AI service API keys for full functionality. Copy `.env.example` to `.env` and add your API keys:

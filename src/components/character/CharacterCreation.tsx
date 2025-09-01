@@ -36,7 +36,15 @@ export default function CharacterCreation({ onComplete, onCancel }: CharacterCre
       case 'name':
         return characterName.trim().length > 0;
       case 'backstory':
-        return !!backstoryContent || backstoryMethod === 'skip';
+        // Allow proceeding if:
+        // - Content already exists (custom-write or generated)
+        // - Skip method is selected
+        // - Keywords method with at least 1 keyword
+        // - AI-generate method (will generate on submit)
+        return !!backstoryContent || 
+               backstoryMethod === 'skip' || 
+               (backstoryMethod === 'keywords' && backstoryKeywords.length > 0) ||
+               backstoryMethod === 'ai-generate';
       default:
         return true;
     }
@@ -61,41 +69,85 @@ export default function CharacterCreation({ onComplete, onCancel }: CharacterCre
   const handleBackstoryComplete = async () => {
     let finalBackstory = backstoryContent;
 
-    // Generate backstory if needed
-    if (!backstoryContent && backstoryMethod !== 'skip') {
+    console.group('🎯 === CHARACTER CREATION WORKFLOW ===');
+    console.log('📋 Backstory Method Decision:', {
+      method: backstoryMethod,
+      hasExistingContent: !!backstoryContent,
+      needsGeneration: !backstoryContent && backstoryMethod !== 'skip' && backstoryMethod !== 'custom-write',
+      keywordCount: backstoryKeywords.length
+    });
+
+    // 🚨 CONDITIONAL API CALLING LOGIC
+    if (backstoryMethod === 'custom-write') {
+      console.log('✍️ CUSTOM BACKSTORY: Using user-written content, skipping Claude API');
+      finalBackstory = backstoryContent; // User already wrote it
+    } else if (!backstoryContent && backstoryMethod !== 'skip') {
+      // Only call Claude API when we need to generate content
+      console.log('🤖 CALLING CLAUDE API for backstory generation...');
       setIsGeneratingBackstory(true);
+      
       try {
         const method = backstoryMethod === 'keywords' ? 'keywords' : 
                      backstoryMethod === 'ai-generate' ? 'full' : 'class-based';
         
-        finalBackstory = await claudeApi.generateCharacterBackstory({
+        const backstoryResult = await claudeApi.generateCharacterBackstory({
           characterName,
           characterClass: selectedClass,
           keywords: backstoryMethod === 'keywords' ? backstoryKeywords : undefined,
-          method
+          method,
+          campaignTone: undefined, // TODO: Add campaign tone from campaign setup
+          wordLimit: 200
         });
+        
+        finalBackstory = backstoryResult.backstory;
         setBackstoryContent(finalBackstory);
+        console.log('✅ Claude API backstory generation completed');
+        
       } catch (error) {
-        console.error('Failed to generate backstory:', error);
+        console.error('❌ Failed to generate backstory:', error);
         // Use fallback
         finalBackstory = `You are ${characterName}, a ${selectedClass} with a mysterious past. Your journey begins now.`;
         setBackstoryContent(finalBackstory);
+        console.log('🔄 Using fallback backstory due to API error');
       } finally {
         setIsGeneratingBackstory(false);
       }
+    } else if (backstoryMethod === 'skip') {
+      console.log('⚡ SKIP METHOD: Using default class-based backstory');
+      finalBackstory = `You are ${characterName}, a ${selectedClass} ready for adventure.`;
     }
+
+    console.log('📖 Final backstory length:', finalBackstory.length, 'characters');
+    console.groupEnd();
 
     // Generate portrait
     setIsGeneratingPortrait(true);
     try {
+      console.group('🎨 === PORTRAIT GENERATION WORKFLOW ===');
+      console.log('📝 INPUT FOR PORTRAIT:', {
+        characterName,
+        characterClass: selectedClass,
+        backstory: finalBackstory.substring(0, 100) + '...',
+        backstoryLength: finalBackstory.length
+      });
+      
       const portrait = await imageApi.generateCharacterPortrait({
         characterName,
         characterClass: selectedClass,
         backstory: finalBackstory
       });
+      
+      console.log('✅ PORTRAIT GENERATED:', {
+        url: portrait.url,
+        alt_text: portrait.alt_text,
+        revised_prompt: portrait.revised_prompt
+      });
+      console.groupEnd();
+      
       setPortraitUrl(portrait.url);
     } catch (error) {
-      console.error('Failed to generate portrait:', error);
+      console.error('❌ Failed to generate portrait:', error);
+      console.groupEnd();
       // Portrait is optional, continue without it
     } finally {
       setIsGeneratingPortrait(false);

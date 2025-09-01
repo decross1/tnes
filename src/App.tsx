@@ -2,7 +2,6 @@ import { AnimatePresence } from 'framer-motion';
 import useGameStore from './stores/gameStore';
 import MainMenuScreen from './components/screens/MainMenuScreen';
 import CharacterCreation from './components/character/CharacterCreation';
-import { APITestRunner } from './components/dev/APITestRunner';
 
 function App() {
   try {
@@ -52,8 +51,6 @@ function App() {
           )}
         </AnimatePresence>
 
-        {/* API Test Runner - Development Only */}
-        {process.env.NODE_ENV === 'development' && <APITestRunner />}
       </div>
     );
   } catch (error) {

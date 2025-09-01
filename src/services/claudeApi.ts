@@ -35,10 +35,6 @@ class ClaudeApiService {
     temperature?: number;
     system?: string;
   } = {}): Promise<ClaudeResponse> {
-    if (!this.apiKey) {
-      throw new Error('Claude API key is not configured');
-    }
-
     const requestBody = {
       model: 'claude-3-5-sonnet-20241022',
       max_tokens: options.maxTokens || 1000,
@@ -52,85 +48,299 @@ class ClaudeApiService {
       ]
     };
 
+    console.log('🔗 Using backend proxy for Claude API...');
+    console.log('📡 Proxy endpoint: http://localhost:3001/api/claude/messages');
+
     try {
-      const response = await fetch(`${this.baseUrl}/v1/messages`, {
+      const response = await fetch('http://localhost:3001/api/claude/messages', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': this.apiKey,
-          'anthropic-version': '2023-06-01'
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify(requestBody)
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(`Claude API error: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
+        console.error('❌ Backend proxy error:', response.status, errorData);
+        throw new Error(`Backend proxy error: ${response.status} - ${errorData.error || 'Unknown error'}`);
       }
 
       const data = await response.json();
+      console.log('✅ Claude API response received through proxy');
       
       return {
         content: data.content[0]?.text || '',
         usage: data.usage
       };
     } catch (error) {
-      console.error('Claude API request failed:', error);
+      console.error('❌ Claude API request failed through proxy:', error);
+      
+      // Check if backend is running
+      if (error.message.includes('fetch')) {
+        console.error('🚨 Backend proxy appears to be down!');
+        console.error('💡 Start backend: cd server && npm run dev');
+        throw new Error('Backend proxy server is not running. Please start: cd server && npm run dev');
+      }
+      
       throw error;
     }
+  }
+
+  /**
+   * 🧪 ENHANCED MOCK RESPONSE GENERATOR
+   * Analyzes the real prompt structure and generates contextually appropriate responses
+   */
+  private generateEnhancedMockResponse(prompt: string, options: any): ClaudeResponse {
+    console.log('🔍 ANALYZING PROMPT STRUCTURE FOR MOCK RESPONSE...');
+    
+    // Extract key information from the structured prompt
+    const characterMatch = prompt.match(/for (\w+), a (\w+)/);
+    const characterName = characterMatch ? characterMatch[1] : 'the adventurer';
+    const characterClass = characterMatch ? characterMatch[2] : 'hero';
+    
+    // Extract keywords if present
+    const keywordSection = prompt.match(/🎯 REQUIRED ELEMENTS TO WEAVE INTO THE STORY:\n(.*?)(?=\n\n📖|$)/s);
+    const keywords = keywordSection ? 
+      keywordSection[1].split('\n').map(line => line.replace('• ', '').trim()).filter(Boolean) : [];
+    
+    console.log('📊 EXTRACTED PROMPT DATA:', {
+      characterName,
+      characterClass,
+      keywords,
+      promptType: keywords.length > 0 ? 'keyword-driven' : 'open-ended',
+      promptLength: prompt.length
+    });
+
+    // Generate appropriate mock backstory
+    let mockBackstory = '';
+    
+    if (keywords.length > 0) {
+      mockBackstory = this.generateKeywordContextualBackstory(characterName, characterClass, keywords);
+    } else if (prompt.includes('classic') || prompt.includes('archetype')) {
+      mockBackstory = this.generateClassBasedBackstory(characterName, characterClass);
+    } else {
+      mockBackstory = this.generateOpenEndedBackstory(characterName, characterClass);
+    }
+
+    console.log('✅ MOCK RESPONSE GENERATED:', {
+      wordCount: mockBackstory.split(/\s+/).length,
+      keywordsIncorporated: keywords.filter(k => mockBackstory.toLowerCase().includes(k.toLowerCase())).length,
+      totalKeywords: keywords.length
+    });
+
+    return {
+      content: mockBackstory,
+      usage: {
+        input_tokens: prompt.length,
+        output_tokens: mockBackstory.length
+      }
+    };
+  }
+
+  private generateKeywordContextualBackstory(name: string, characterClass: string, keywords: string[]): string {
+    // Create a backstory that weaves in the actual keywords provided
+    const keywordLower = keywords.map(k => k.toLowerCase());
+    
+    const openingTemplate = `You are ${name}, a ${characterClass} whose life has been forever marked by extraordinary circumstances.`;
+    
+    let backstoryParts = [openingTemplate];
+    
+    // Handle revenge keyword
+    if (keywordLower.includes('revenge')) {
+      backstoryParts.push(`A burning desire for revenge drives every decision you make.`);
+    }
+    
+    // Handle artifact keyword  
+    if (keywordLower.includes('artifact')) {
+      backstoryParts.push(`An ancient artifact came into your possession under mysterious circumstances, its power both blessing and curse.`);
+    }
+    
+    // Handle lost twin keyword
+    if (keywordLower.includes('lost twin')) {
+      backstoryParts.push(`Your twin sibling vanished without a trace, leaving behind only questions and a desperate need to uncover the truth.`);
+    }
+    
+    // Handle cyborg keyword
+    if (keywordLower.includes('cyborg')) {
+      backstoryParts.push(`The mechanical augmentations that replaced parts of your body serve as constant reminders of a traumatic past.`);
+    }
+    
+    // Handle two toned hair keyword
+    if (keywordLower.includes('two toned hair')) {
+      backstoryParts.push(`Your distinctive two-toned hair marks you as different, a visible sign of the magical forces that shaped your destiny.`);
+    }
+    
+    // Add generic keywords
+    const remainingKeywords = keywords.filter(k => 
+      !['revenge', 'artifact', 'lost twin', 'cyborg', 'two toned hair'].includes(k.toLowerCase())
+    );
+    
+    if (remainingKeywords.length > 0) {
+      backstoryParts.push(`The elements of ${remainingKeywords.slice(0,2).join(' and ')} played crucial roles in shaping who you became.`);
+    }
+    
+    // Add class-specific motivation
+    const classMotivations = {
+      Cleric: `Your faith was tested by these trials, but emerging stronger, you now serve as a divine instrument seeking both redemption and justice.`,
+      Fighter: `These experiences forged you into a formidable warrior, your skills honed by necessity and your resolve unbreakable.`,
+      Wizard: `Through study and determination, you've learned to harness arcane forces, using knowledge as both weapon and shield.`,
+      Rogue: `The shadows became your allies, teaching you that sometimes the most direct path isn't the wisest one.`
+    };
+    
+    backstoryParts.push(classMotivations[characterClass as keyof typeof classMotivations] || 
+      `Your journey as a ${characterClass} began from these formative experiences, shaping your skills and worldview.`);
+    
+    backstoryParts.push(`Now you venture forth, knowing that your past holds keys to mysteries yet unsolved, and that your unique combination of experiences makes you both powerful and dangerous to those who would oppose you.`);
+    
+    return backstoryParts.join(' ');
+  }
+
+  private generateClassBasedBackstory(name: string, characterClass: string): string {
+    const classBackstories = {
+      Fighter: `You are ${name}, forged in the crucible of countless battles. Your sword arm has known both victory and defeat, and scars tell the story of lessons learned the hard way.`,
+      Wizard: `You are ${name}, a scholar of the arcane arts whose thirst for knowledge knows no bounds. Your studies were interrupted by mysterious circumstances.`,
+      Rogue: `You are ${name}, a shadow walker who learned that survival requires more than quick hands and quicker wit.`,
+      Cleric: `You are ${name}, chosen by divine forces to serve as their instrument in mortal affairs. Your faith was tested by crisis but emerged stronger.`
+    };
+    
+    return classBackstories[characterClass as keyof typeof classBackstories] || 
+           `You are ${name}, a ${characterClass} with a mysterious past and an uncertain future.`;
+  }
+
+  private generateOpenEndedBackstory(name: string, characterClass: string): string {
+    return `You are ${name}, a ${characterClass} whose past is shrouded in mystery. The path that led you to adventure began with a single, life-changing moment that you can never forget. Now you seek answers to questions that haunt your dreams, carrying secrets that could change the world if discovered. Your skills as a ${characterClass} serve you well, but they are merely tools in service of a greater purpose that you are only beginning to understand.`;
+  }
+
+  private generateMockKeywordBackstory(keywords: string, fullPrompt: string): string {
+    // Extract character name and class from prompt
+    const nameMatch = fullPrompt.match(/for a (\w+) named (\w+)/);
+    const characterClass = nameMatch ? nameMatch[1] : 'adventurer';
+    const characterName = nameMatch ? nameMatch[2] : 'the hero';
+    
+    // Parse the actual keywords from the extracted string
+    const keywordArray = keywords.split(',').map(k => k.trim());
+    
+    console.log('🔍 Mock generation using keywords:', keywordArray);
+    
+    // Generate backstory that actually incorporates the user's keywords
+    if (keywordArray.includes('plant') || keywordArray.includes('flower') || keywordArray.includes('tropical')) {
+      // Tropical/plant themed backstory
+      return `You are ${characterName}, a ${characterClass} who grew up in the verdant rainforests of the distant tropics. The constant sound of rain on broad leaves was your childhood lullaby, while flowering vines and exotic plants became your closest companions.
+
+Your unusual bond with nature began when you discovered a rare flower that bloomed only during storms. This plant revealed to you the secret paths through the jungle canopy, where you learned to move as silently as the morning mist. Even the native koala-like creatures accepted you as one of their own, teaching you their ancient wisdom.
+
+But when outsiders came to exploit your tropical homeland, burning the sacred groves and capturing the peaceful creatures, you were forced to flee. Now you carry seeds from your lost paradise, hoping to find a new place where the old magic can take root. The rain still calls to you, whispering of secrets yet to be discovered.
+
+Your quest is to protect what remains of the natural world, using skills learned in paradise lost.`;
+    } else if (keywordArray.some(k => ['pirate', 'submarine', 'sea'].includes(k.toLowerCase()))) {
+      // Maritime themed backstory  
+      return `You are ${characterName}, a ${characterClass} whose life has been shaped by the endless ocean. Your adventures began aboard vessels that sailed both above and beneath the waves, learning secrets that few surface dwellers could imagine.
+
+Your distinctive appearance and unwavering loyalty earned you respect among crews who valued skill over convention. The submarine's captain became your mentor, teaching you arts both arcane and practical in the depths where sunlight never reaches.
+
+But betrayal struck when you discovered your crew planned to use ancient artifacts for dark purposes. The vessel's destruction left you stranded, carrying only your hard-won knowledge and a burning need to prevent the awakening of things better left sleeping.
+
+Now you walk the surface world, your past making you both valuable and hunted. The artifacts you guard are sought by many, and your distinctive features make hiding nearly impossible.
+
+Your quest for justice has only just begun.`;
+    } else {
+      // Generic keyword-incorporating backstory
+      return `You are ${characterName}, a ${characterClass} whose past is intertwined with elements that others might consider ordinary: ${keywordArray.slice(0, 3).join(', ')}. But in your hands, these seemingly simple things became the foundation of extraordinary abilities.
+
+Your training began in an unexpected place, where you learned that true power comes not from grand gestures but from understanding the subtle connections between all things. The ${keywordArray[0] || 'mysterious element'} that others overlooked became your greatest strength.
+
+A secret from your past involves ${keywordArray[1] || 'an ancient mystery'}, something that changed your understanding of the world forever. When danger threatened everything you held dear, you were forced to leave behind the life you knew and venture into the unknown.
+
+Now you carry both burden and blessing, knowing that your unique knowledge makes you valuable to some and dangerous to others. Your quest is to find a place where your abilities can serve a greater purpose.
+
+The adventure that awaits will test everything you've learned.`;
+    }
+  }
+
+  private generateMockGenericBackstory(fullPrompt: string): string {
+    const nameMatch = fullPrompt.match(/for a (\w+) named (\w+)/);
+    const characterClass = nameMatch ? nameMatch[1] : 'adventurer';
+    const characterName = nameMatch ? nameMatch[2] : 'the hero';
+    
+    const classBackstories = {
+      Fighter: `You are ${characterName}, forged in the crucible of countless battles. Your sword arm has known both victory and defeat, and scars tell the story of lessons learned the hard way. A personal tragedy drove you from your homeland, and now you seek redemption through acts of heroism. Ancient enemies still pursue you, and only by growing stronger can you hope to face the darkness of your past.`,
+      
+      Wizard: `You are ${characterName}, a scholar of the arcane arts whose thirst for knowledge knows no bounds. Your studies were interrupted by a mysterious event that left gaps in your memory - and in your spellbook. Ancient magical energies call to you from forgotten ruins and dusty tomes. Someone or something wants to prevent you from recovering your lost knowledge, making your quest for truth increasingly dangerous.`,
+      
+      Rogue: `You are ${characterName}, a shadow walker who learned that survival requires more than quick hands and quicker wit. A betrayal by someone you trusted left you questioning everything you thought you knew about loyalty. Now you work alone, taking jobs that others won't touch. But your past catches up in unexpected ways, and some debts can only be paid in blood.`,
+      
+      Cleric: `You are ${characterName}, chosen by divine forces to serve as their instrument in mortal affairs. Your faith was tested by a crisis that shook the very foundations of your beliefs, but emerging from that trial only strengthened your resolve. Divine visions guide your path, but interpreting them correctly means the difference between salvation and catastrophe.`
+    };
+    
+    return classBackstories[characterClass as keyof typeof classBackstories] || classBackstories.Fighter;
   }
 
   async generateCharacterBackstory(request: BackstoryGenerationRequest): Promise<BackstoryGenerationResponse> {
     const { characterName, characterClass, keywords = [], method, campaignTone, wordLimit = 200 } = request;
 
-    let prompt = '';
-    let systemPrompt = `You are a creative D&D dungeon master. Create compelling character backstories that include mystery, motivation, and adventure hooks. Write in second person perspective and keep under ${wordLimit} words.${campaignTone ? ` The tone should be ${campaignTone}.` : ''}`;
-
-    switch (method) {
-      case 'full':
-        prompt = `Create a unique and compelling backstory for a ${characterClass} named ${characterName}.
-
-Include:
-- Their origin and background
-- What motivates them to adventure
-- A secret or mystery from their past
-- Why they left their previous life behind
-
-Make it mysterious and engaging with hooks for future adventures. Write in second person ("You were born...").`;
-        break;
-
-      case 'keywords':
-        prompt = `Create a compelling D&D character backstory for a ${characterClass} named ${characterName}.
-
-Incorporate these elements naturally into the story: ${keywords.join(', ')}
-
-Include:
-- Origin that connects to the keywords
-- Motivation for adventuring
-- A secret or mystery
-- Adventure hooks
-
-Write in second person perspective ("You grew up..."). Keep under ${wordLimit} words and make it mysterious and engaging.`;
-        break;
-
-      case 'class-based':
-        prompt = `Create a classic backstory for a ${characterClass} named ${characterName}.
-
-Focus on typical ${characterClass} origins and motivations:
-- What led them to become a ${characterClass}
-- Their training or awakening to their abilities  
-- Why they're now adventuring
-- A personal goal or quest
-
-Write in second person perspective and keep under ${wordLimit} words.`;
-        break;
+    // 🚨 CONDITIONAL API CALLING: Don't call Claude for custom-write method
+    if (method === 'custom-write') {
+      console.log('💬 CUSTOM BACKSTORY: Skipping Claude API call - user wrote their own backstory');
+      return {
+        backstory: '', // Will be filled by user content
+        extractedTraits: [],
+        wordCount: 0,
+        confidence: 1.0 // Perfect confidence for user-written content
+      };
     }
 
+    // 📋 DYNAMIC PROMPT STRUCTURE BUILDING
+    const promptBuilder = this.buildDynamicPrompt({
+      characterName,
+      characterClass, 
+      keywords,
+      method,
+      campaignTone,
+      wordLimit
+    });
+
+    console.group('🏗️ === DYNAMIC PROMPT CONSTRUCTION ===');
+    console.log('📊 Prompt Configuration:', {
+      method,
+      hasKeywords: keywords.length > 0,
+      keywordCount: keywords.length,
+      hasCampaignTone: !!campaignTone,
+      wordLimit
+    });
+    console.groupEnd();
+
     try {
-      const response = await this.makeRequest(prompt, {
+      // 📋 DETAILED WORKFLOW LOGGING
+      console.group('🎭 === BACKSTORY GENERATION WORKFLOW ===');
+      
+      console.log('📝 1. INPUT PARAMETERS:', {
+        characterName,
+        characterClass,
+        method,
+        keywords: keywords || [],
+        campaignTone: campaignTone || 'none',
+        wordLimit
+      });
+
+      console.log('🤖 2. CLAUDE API REQUEST STRUCTURE:', {
+        model: 'claude-3-5-sonnet-20241022',
+        maxTokens: Math.ceil(wordLimit * 1.5),
+        temperature: 0.85,
+        systemPrompt: promptBuilder.systemPrompt,
+        userPrompt: promptBuilder.userPrompt
+      });
+
+      console.log('🔍 3. KEYWORD INTEGRATION:', {
+        keywordsUsed: keywords,
+        keywordIntegrationStrategy: method === 'keywords' ? 'direct-incorporation' : 'contextual-influence',
+        promptStructure: promptBuilder.structure
+      });
+
+      const response = await this.makeRequest(promptBuilder.userPrompt, {
         maxTokens: Math.ceil(wordLimit * 1.5), // Allow some buffer for generation
         temperature: 0.85,
-        system: systemPrompt
+        system: promptBuilder.systemPrompt
       });
 
       const backstory = response.content.trim();
@@ -139,16 +349,38 @@ Write in second person perspective and keep under ${wordLimit} words.`;
       // Extract key traits/themes from the backstory for future use
       const extractedTraits = this.extractTraitsFromBackstory(backstory, characterClass);
 
-      return {
+      console.log('📖 3. CLAUDE API RESPONSE:', {
+        backstory,
+        wordCount,
+        usage: response.usage
+      });
+
+      console.log('🏷️ 4. EXTRACTED TRAITS:', {
+        traits: extractedTraits,
+        count: extractedTraits.length
+      });
+
+      const result = {
         backstory,
         extractedTraits,
         wordCount,
         confidence: 0.9 // High confidence for successful API response
       };
+
+      console.log('✅ 5. FINAL BACKSTORY RESULT:', result);
+      console.groupEnd();
+
+      return result;
     } catch (error) {
-      console.error('Failed to generate backstory:', error);
+      console.error('❌ Failed to generate backstory:', error);
       // Return fallback backstory
       const fallbackBackstory = this.getFallbackBackstory(characterClass, characterName);
+      console.log('🔄 Using Fallback Backstory:', {
+        characterClass,
+        characterName,
+        fallbackBackstory,
+        confidence: 0.3
+      });
       return {
         backstory: fallbackBackstory,
         extractedTraits: this.extractTraitsFromBackstory(fallbackBackstory, characterClass),
@@ -156,6 +388,137 @@ Write in second person perspective and keep under ${wordLimit} words.`;
         confidence: 0.3 // Lower confidence for fallback
       };
     }
+  }
+
+  /**
+   * 🏗️ DYNAMIC PROMPT BUILDER
+   * Creates context-aware prompts based on user input method and available data
+   */
+  private buildDynamicPrompt(params: {
+    characterName: string;
+    characterClass: string;
+    keywords: string[];
+    method: string;
+    campaignTone?: string;
+    wordLimit: number;
+  }) {
+    const { characterName, characterClass, keywords, method, campaignTone, wordLimit } = params;
+
+    // Base system prompt with dynamic tone integration
+    const systemPrompt = [
+      'You are a master D&D dungeon master and storyteller.',
+      'Create compelling character backstories with mystery, motivation, and adventure hooks.',
+      'Write in second person perspective ("You are/were...").',
+      `Keep responses under ${wordLimit} words.`,
+      campaignTone ? `Maintain a ${campaignTone} tone throughout.` : '',
+      'Focus on creating hooks that can drive future adventures and character development.'
+    ].filter(Boolean).join(' ');
+
+    let userPrompt = '';
+    let structure = '';
+
+    switch (method) {
+      case 'keywords':
+        structure = 'keyword-driven-narrative';
+        userPrompt = this.buildKeywordDrivenPrompt(characterName, characterClass, keywords, wordLimit);
+        break;
+
+      case 'full':
+        structure = 'open-ended-generation';  
+        userPrompt = this.buildFullGenerationPrompt(characterName, characterClass, wordLimit);
+        break;
+
+      case 'class-based':
+        structure = 'archetype-focused';
+        userPrompt = this.buildClassBasedPrompt(characterName, characterClass, wordLimit);
+        break;
+
+      case 'skip':
+        structure = 'minimal-default';
+        userPrompt = this.buildMinimalPrompt(characterName, characterClass);
+        break;
+
+      default:
+        structure = 'fallback';
+        userPrompt = this.buildFullGenerationPrompt(characterName, characterClass, wordLimit);
+    }
+
+    return {
+      systemPrompt,
+      userPrompt,
+      structure,
+      metadata: {
+        method,
+        keywordCount: keywords.length,
+        hasTone: !!campaignTone,
+        wordLimit
+      }
+    };
+  }
+
+  private buildKeywordDrivenPrompt(name: string, characterClass: string, keywords: string[], wordLimit: number): string {
+    return `Create a D&D character backstory for ${name}, a ${characterClass}.
+
+🎯 REQUIRED ELEMENTS TO WEAVE INTO THE STORY:
+${keywords.map(k => `• ${k}`).join('\n')}
+
+📖 BACKSTORY REQUIREMENTS:
+• Naturally incorporate ALL provided elements into a cohesive narrative
+• Explain how these elements shaped ${name}'s path to becoming a ${characterClass}
+• Include a compelling origin story that connects the elements
+• Add a personal motivation for adventuring
+• Include a secret or mystery that could drive future quests
+• Create potential adventure hooks that GMs can use
+
+✍️ WRITING STYLE:
+• Write in second person ("You grew up in...")
+• Keep under ${wordLimit} words
+• Make it engaging and mysterious
+• Focus on character depth and story hooks
+
+Begin the backstory now:`;
+  }
+
+  private buildFullGenerationPrompt(name: string, characterClass: string, wordLimit: number): string {
+    return `Create a unique and compelling backstory for ${name}, a ${characterClass}.
+
+📖 INCLUDE IN THE BACKSTORY:
+• Origin and early life that shaped them
+• The event or circumstances that led them to become a ${characterClass}
+• What motivates them to seek adventure
+• A secret, mystery, or unresolved conflict from their past
+• Why they left their previous life behind
+• Personality traits that emerge from their history
+
+✍️ REQUIREMENTS:
+• Write in second person perspective ("You were born...")
+• Keep under ${wordLimit} words
+• Make it mysterious and engaging with hooks for future adventures
+• Focus on character development opportunities
+
+Create ${name}'s backstory:`;
+  }
+
+  private buildClassBasedPrompt(name: string, characterClass: string, wordLimit: number): string {
+    return `Create a classic ${characterClass} backstory for ${name}.
+
+📖 FOCUS ON ${characterClass.toUpperCase()} ARCHETYPE:
+• What led them to pursue the ${characterClass} path
+• Their training, mentorship, or awakening to their abilities
+• Why they've chosen to adventure rather than settle down
+• A personal goal or quest specific to their class
+• How their class abilities manifest in their personality
+
+✍️ REQUIREMENTS:
+• Write in second person perspective
+• Keep under ${wordLimit} words  
+• Stay true to D&D ${characterClass} traditions while adding unique elements
+
+Create ${name} the ${characterClass}'s backstory:`;
+  }
+
+  private buildMinimalPrompt(name: string, characterClass: string): string {
+    return `Create a brief, classic backstory for ${name}, a ${characterClass}. Focus on the essential elements that explain why they adventure. Write in second person, keep it under 100 words, and include one mystery or hook for future development.`;
   }
 
   async generatePortraitPrompt(request: PortraitPromptRequest): Promise<PortraitPromptResponse> {
