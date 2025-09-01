@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useGameStore } from '../../stores/gameStore';
-import DungeonCampaignConstructor from './DungeonCampaignConstructor';
+import useGameStore from '../../stores/gameStore';
+import SimpleCampaignCreator from './SimpleCampaignCreator';
 import { CampaignResultPopup } from './CampaignPopup';
 import { motion } from 'framer-motion';
 
@@ -13,10 +13,8 @@ export default function CampaignConstructorIntegration({
 }: CampaignConstructorIntegrationProps) {
   const { 
     character,
-    ui,
-    setUI,
-    setCampaignSetup,
-    startNewGame
+    updateCampaignSetup,
+    goToGame
   } = useGameStore();
 
   const [constructorOpen, setConstructorOpen] = useState(false);
@@ -38,12 +36,11 @@ export default function CampaignConstructorIntegration({
     setCampaignResult(result);
     
     // Update game store with campaign setup
-    setCampaignSetup({
-      mode: result.choices['narrative-complexity'] === 'simple' ? 'full-random' : 'guided',
-      themes: [result.choices['theme-selection']],
-      tone: determineCampaignTone(result.choices),
-      startingLocation: mapThemeToLocation(result.choices['theme-selection']),
-      campaignKeywords: extractCampaignKeywords(result.choices),
+    updateCampaignSetup({
+      mode: result.type === 'ai-generated' ? 'full-random' : 'guided',
+      themes: result.data.keywords || [],
+      tone: 'heroic', // Default tone for now
+      campaignKeywords: result.data.keywords || [],
       isSetup: true
     });
     
@@ -58,8 +55,9 @@ export default function CampaignConstructorIntegration({
     // Generate initial scene based on campaign construction
     const initialScene = generateInitialScene(campaignResult);
     
-    // Start the game with the constructed campaign
-    startNewGame(initialScene);
+    // For now, just go to the game screen
+    // TODO: Set up the initial scene in the game state
+    goToGame();
     
     // Notify parent component
     onConstructorComplete();
@@ -129,12 +127,23 @@ export default function CampaignConstructorIntegration({
       </motion.div>
 
       {/* The actual constructor modal */}
-      <DungeonCampaignConstructor
-        isOpen={constructorOpen}
-        onClose={handleCloseConstructor}
-        onComplete={handleConstructorComplete}
-        characterName={character?.name || ''}
-        characterClass={character?.class?.name || ''}
+      <SimpleCampaignCreator
+        onComplete={(result) => {
+          // Process the simple campaign result
+          const processedResult = {
+            campaignName: generateCampaignName(result.type, result.data.keywords),
+            theme: result.type,
+            estimatedDuration: 2,
+            characterName: character?.name || '',
+            choices: {
+              'campaign-type': result.type,
+              'keywords': result.data.keywords || [],
+              'user-prompt': result.data.userPrompt || ''
+            }
+          };
+          handleConstructorComplete(processedResult);
+        }}
+        onCancel={handleCloseConstructor}
       />
 
       {/* Result popup with Pinky image */}
@@ -218,46 +227,45 @@ function extractCampaignKeywords(choices: Record<string, any>): string[] {
   return keywords.filter(Boolean);
 }
 
+function generateCampaignName(type: string, keywords?: string[]): string {
+  const typeNames = {
+    'ai-generated': 'AI-Generated Adventure',
+    'keyword-guided': keywords && keywords.length > 0 
+      ? `${keywords[0].charAt(0).toUpperCase() + keywords[0].slice(1)} Campaign`
+      : 'Guided Adventure',
+    'user-prompt': 'Custom Adventure'
+  };
+  
+  return typeNames[type as keyof typeof typeNames] || 'New Adventure';
+}
+
 function generateInitialScene(campaignResult: any): string {
-  const { choices, characterName, characterClass } = campaignResult;
-  const theme = choices['theme-selection'];
-  const entry = choices['entry-method'];
-  const goal = choices['primary-goal'];
+  const { characterName, characterClass, choices } = campaignResult;
+  const campaignType = choices['campaign-type'];
+  const keywords = choices['keywords'] || [];
+  const userPrompt = choices['user-prompt'] || '';
   
-  const themeDescriptions = {
-    'ancient-tomb': 'ancient stone corridors filled with the scent of ages past',
-    'wizard-tower': 'a spiraling tower where magical energies crackle in the air',
-    'underground-city': 'the outskirts of a vast subterranean metropolis',
-    'natural-cavern': 'natural caves carved by underground rivers',
-    'abandoned-mine': 'wooden-supported tunnels that echo with your footsteps',
-    'cult-temple': 'dark hallways adorned with ominous religious symbols',
-    'dragon-lair': 'massive caverns that reek of sulfur and danger',
-    'prison-fortress': 'stone corridors designed for maximum security'
-  };
+  // Use the first scenario from the campaign result if it exists
+  if (campaignResult.firstScenario) {
+    return campaignResult.firstScenario;
+  }
   
-  const entryDescriptions = {
-    'front-door': 'You stand before the main entrance, knowing full well that your presence is expected.',
-    'secret-passage': 'You slip through a hidden entrance you discovered, hoping to maintain the element of surprise.',
-    'breach-walls': 'You force your way through a wall you\'ve broken, debris still falling around you.',
-    'underground': 'You emerge from underground tunnels into the complex proper.',
-    'aerial': 'You drop down from above, having gained entry from the roof or upper levels.'
-  };
+  // Fallback scenario generation
+  let scene = `${characterName} the ${characterClass} stands ready to begin their adventure. `;
   
-  const goalMotivations = {
-    'treasure-hunt': 'The promise of legendary treasure drives you forward.',
-    'rescue-mission': 'Someone important is trapped within, and time may be running out.',
-    'investigation': 'Dark mysteries surround this place, and you must uncover the truth.',
-    'elimination': 'A dangerous threat lurks here that must be destroyed.',
-    'artifact-retrieval': 'A powerful artifact awaits, if you can claim it.',
-    'escape': 'You find yourself trapped within and must find your way out.'
-  };
+  if (campaignType === 'keyword-guided' && keywords.length > 0) {
+    scene += `Recent events involving ${keywords.slice(0, 2).join(' and ')} have led to this moment. `;
+  } else if (campaignType === 'user-prompt' && userPrompt) {
+    scene += `The circumstances you envisioned have come to pass. `;
+  } else {
+    scene += `Fate has guided you to this crossroads. `;
+  }
   
-  let scene = `${characterName} the ${characterClass} finds themselves in ${themeDescriptions[theme] || 'a mysterious location'}. `;
-  scene += entryDescriptions[entry] || 'You enter through an unremarkable entrance. ';
-  scene += '\n\n';
-  scene += goalMotivations[goal] || 'Your purpose here is unclear, but danger certainly awaits. ';
-  scene += '\n\n';
-  scene += 'The adventure begins now. What do you do first?';
+  scene += '\n\nThree paths lie before you:\n\n';
+  scene += '**A)** Seek information and allies in the nearby settlement\n';
+  scene += '**B)** Investigate the mysterious occurrences directly\n';
+  scene += '**C)** Prepare thoroughly before taking any action\n\n';
+  scene += 'What do you choose?';
   
   return scene;
 }

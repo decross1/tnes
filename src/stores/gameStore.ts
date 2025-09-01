@@ -58,7 +58,7 @@ interface ExtendedGameState extends GameState {
   };
 
   // App Navigation
-  currentScreen: 'mainMenu' | 'game';
+  currentScreen: 'mainMenu' | 'campaignConstructor' | 'game';
   isInCampaign: boolean;
   
   // Keyword Management
@@ -123,6 +123,7 @@ interface ExtendedGameActions {
   
   // Navigation actions
   goToMainMenu: () => void;
+  goToCampaignConstructor: () => void;
   goToGame: () => void;
 }
 
@@ -328,8 +329,8 @@ const useGameStore = create<ExtendedGameState & ExtendedGameActions>()(
                           ...state,
                           character: enhancedCharacter,
                           characterCreation: { isActive: false, step: 'class' as const },
-                          currentScreen: 'game' as const,
-                          isInCampaign: true
+                          currentScreen: 'campaignConstructor' as const,
+                          isInCampaign: false
                         }
                       }
                     : slot
@@ -347,8 +348,8 @@ const useGameStore = create<ExtendedGameState & ExtendedGameActions>()(
                 currentSlot: emptySlot?.id || null,
                 slots: updatedSlots
               },
-              currentScreen: 'game' as const,
-              isInCampaign: true,
+              currentScreen: 'campaignConstructor' as const,
+              isInCampaign: false,
               saveData: { ...state.saveData, lastSaved: new Date() }
             };
           });
@@ -570,6 +571,12 @@ const useGameStore = create<ExtendedGameState & ExtendedGameActions>()(
         goToMainMenu: () =>
           set((state) => ({
             currentScreen: 'mainMenu' as const,
+            isInCampaign: false
+          })),
+
+        goToCampaignConstructor: () =>
+          set((state) => ({
+            currentScreen: 'campaignConstructor' as const,
             isInCampaign: false
           })),
 

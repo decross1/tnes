@@ -2,15 +2,12 @@ import { AnimatePresence } from 'framer-motion';
 import useGameStore from './stores/gameStore';
 import MainMenuScreen from './components/screens/MainMenuScreen';
 import CharacterCreation from './components/character/CharacterCreation';
+import CampaignConstructorIntegration from './components/campaign/CampaignConstructorIntegration';
 
 function App() {
   try {
     const {
       character,
-      currentScene,
-      storyHistory,
-      pendingRoll,
-      ui,
       characterCreation,
       campaigns,
       currentScreen,
@@ -24,15 +21,26 @@ function App() {
 
     return (
       <div className="min-h-screen">
-        {/* Clean UI - Remove debug info */}
-        {currentScreen === 'mainMenu' ? (
+        {/* Main Navigation */}
+        {currentScreen === 'mainMenu' && (
           <MainMenuScreen
             campaigns={campaigns.slots}
             onStartNewCampaign={createNewCampaign}
             onLoadCampaign={loadCampaign}
             onDeleteCampaign={deleteCampaign}
           />
-        ) : (
+        )}
+
+        {currentScreen === 'campaignConstructor' && character && (
+          <CampaignConstructorIntegration
+            onConstructorComplete={() => {
+              // After campaign is constructed, go to game
+              goToMainMenu(); // For now, go back to main menu until game screen is ready
+            }}
+          />
+        )}
+
+        {currentScreen === 'game' && (
           <div style={{ padding: '20px', background: '#e0f0ff', margin: '20px 0' }}>
             <h2>Game Screen (Placeholder)</h2>
             <p>Playing as: <strong>{character?.name}</strong></p>
