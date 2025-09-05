@@ -611,6 +611,158 @@ Output only the optimized Stable Diffusion prompt, no explanations or additional
     return fallbacks[characterClass as keyof typeof fallbacks] || fallbacks.Fighter;
   }
 
+  /**
+   * Generate a dynamic campaign preview based on dungeon construction choices
+   */
+  async generateCampaignPreview(
+    constructionChoices: Record<string, any>,
+    characterName: string,
+    characterClass: string
+  ): Promise<string> {
+    console.log('🏰 Generating campaign preview for:', {
+      characterName,
+      characterClass,
+      choicesMade: Object.keys(constructionChoices).length,
+      theme: constructionChoices['theme-selection'],
+      goal: constructionChoices['primary-goal']
+    });
+
+    // Build context from construction choices
+    const context = this.buildCampaignContext(constructionChoices);
+    
+    const systemPrompt = `You are an expert D&D dungeon master creating an engaging campaign preview. Generate a compelling 2-3 sentence preview that captures the atmosphere and stakes of the adventure based on the player's construction choices.`;
+
+    const userPrompt = `
+Create a campaign preview for:
+Character: ${characterName} the ${characterClass}
+Theme: ${context.theme}
+Primary Goal: ${context.goal}
+Setting Details: ${context.details}
+Tone: ${context.tone}
+
+Write a compelling 2-3 sentence preview that:
+1. Sets the atmospheric tone
+2. Hints at the primary challenge/goal
+3. Creates anticipation for the adventure
+4. Incorporates the character's class meaningfully
+
+Keep it under 150 words and write in second person ("You find yourself...").
+`;
+
+    try {
+      const response = await this.makeRequest(userPrompt, {
+        maxTokens: 200,
+        temperature: 0.9,
+        system: systemPrompt
+      });
+
+      let preview = response.content.trim();
+      
+      // Ensure it starts with the character's name if it doesn't already
+      if (!preview.includes(characterName)) {
+        preview = `${characterName} the ${characterClass}... ${preview}`;
+      }
+
+      console.log('✅ Campaign preview generated:', {
+        previewLength: preview.length,
+        wordCount: preview.split(/\s+/).length
+      });
+
+      return preview;
+    } catch (error) {
+      console.warn('⚠️ AI preview generation failed, using fallback');
+      return this.generateFallbackCampaignPreview(constructionChoices, characterName, characterClass);
+    }
+  }
+
+  private buildCampaignContext(choices: Record<string, any>): {
+    theme: string;
+    goal: string;
+    details: string;
+    tone: string;
+  } {
+    const theme = choices['theme-selection'] || 'unknown';
+    const goal = choices['primary-goal'] || 'adventure';
+    const size = choices['size-scope'] || 'medium';
+    const entryMethod = choices['entry-method'] || 'front-door';
+    const exploration = choices['exploration-style'] || 'methodical';
+    const creatures = choices['creature-types'] || [];
+    const magic = choices['magical-elements'] || 'none';
+    const riskLevel = choices['risk-tolerance'] || 3;
+
+    // Convert theme ID to readable name
+    const themeNames: Record<string, string> = {
+      'ancient-tomb': 'Ancient Tomb',
+      'wizard-tower': 'Wizard Tower',
+      'underground-city': 'Underground City',
+      'natural-cavern': 'Natural Caverns',
+      'abandoned-mine': 'Abandoned Mine',
+      'cult-temple': 'Dark Temple',
+      'dragon-lair': 'Dragon Lair',
+      'prison-fortress': 'Prison Fortress'
+    };
+
+    const goalNames: Record<string, string> = {
+      'treasure-hunt': 'seeking ancient treasures',
+      'rescue-mission': 'on a desperate rescue mission',
+      'investigation': 'investigating dark mysteries',
+      'elimination': 'hunting dangerous foes',
+      'artifact-retrieval': 'pursuing a legendary artifact',
+      'escape': 'planning a daring escape'
+    };
+
+    const context = {
+      theme: themeNames[theme] || 'mysterious location',
+      goal: goalNames[goal] || 'unknown purpose',
+      details: `${size} scale, ${entryMethod} entry, ${exploration} approach`,
+      tone: riskLevel <= 2 ? 'cautious' : riskLevel >= 4 ? 'dangerous' : 'balanced'
+    };
+
+    if (Array.isArray(creatures) && creatures.length > 0) {
+      context.details += `, inhabited by ${creatures.join(', ')}`;
+    }
+
+    if (magic && magic !== 'none') {
+      context.details += `, with ${magic} magical influence`;
+    }
+
+    return context;
+  }
+
+  private generateFallbackCampaignPreview(
+    choices: Record<string, any>,
+    characterName: string,
+    characterClass: string
+  ): string {
+    const theme = choices['theme-selection'];
+    const goal = choices['primary-goal'];
+    
+    const themeDescriptions: Record<string, string> = {
+      'ancient-tomb': 'the cursed halls of an ancient burial ground',
+      'wizard-tower': 'a tower crackling with wild magical energy',
+      'underground-city': 'the forgotten streets of a subterranean metropolis',
+      'natural-cavern': 'the winding depths of natural cave systems',
+      'abandoned-mine': 'the haunted tunnels of a deserted mine',
+      'cult-temple': 'the dark chambers of a forbidden temple',
+      'dragon-lair': 'the treasure-filled lair of an ancient wyrm',
+      'prison-fortress': 'the oppressive walls of a maximum-security fortress'
+    };
+
+    const goalMotivations: Record<string, string> = {
+      'treasure-hunt': 'Legends speak of vast riches hidden within',
+      'rescue-mission': 'Someone dear to you is trapped inside',
+      'investigation': 'Dark mysteries demand investigation',
+      'elimination': 'A terrible threat must be eliminated',
+      'artifact-retrieval': 'A powerful artifact awaits the worthy',
+      'escape': 'You must find a way out of this prison'
+    };
+
+    const themeDesc = themeDescriptions[theme] || 'a mysterious and dangerous place';
+    const motivation = goalMotivations[goal] || 'Adventure calls to you';
+
+    return `${characterName} the ${characterClass} stands before ${themeDesc}. ${motivation}, but only the brave dare enter. Your skills will be tested as you navigate this perilous domain.`;
+  }
+
   private extractTraitsFromBackstory(backstory: string, characterClass: string): string[] {
     // Simple extraction of key themes/traits from backstory
     const traits: string[] = [];

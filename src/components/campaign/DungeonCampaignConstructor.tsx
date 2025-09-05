@@ -14,6 +14,7 @@ import {
   ExplorationStyle
 } from '../../types/dungeonCampaign';
 import { DUNGEON_CHOICE_OPTIONS } from '../../data/dungeonChoices';
+import { claudeApi } from '../../services/claudeApi';
 
 interface DungeonCampaignConstructorProps {
   isOpen: boolean;
@@ -51,7 +52,7 @@ export default function DungeonCampaignConstructor({
     return !!constructionState.choices[currentStepData.id];
   }, [currentStepData, constructionState.choices]);
 
-  const handleChoice = useCallback((stepId: string, value: any) => {
+  const handleChoice = useCallback(async (stepId: string, value: any) => {
     setConstructionState(prev => {
       const newChoices = { ...prev.choices, [stepId]: value };
       const currentStep = DUNGEON_CONSTRUCTION_STEPS.find(s => s.id === stepId);
@@ -66,10 +67,30 @@ export default function DungeonCampaignConstructor({
         ...prev,
         choices: newChoices,
         unlockedSteps: newUnlocked,
-        campaignPreview: generateCampaignPreview(newChoices, characterName, characterClass)
+        campaignPreview: 'Generating campaign preview...' // Temporary placeholder
       };
     });
-  }, [characterName, characterClass]);
+
+    // Generate AI campaign preview asynchronously
+    try {
+      const newChoices = { ...constructionState.choices, [stepId]: value };
+      const aiPreview = await claudeApi.generateCampaignPreview(newChoices, characterName, characterClass);
+      
+      setConstructionState(prev => ({
+        ...prev,
+        campaignPreview: aiPreview
+      }));
+    } catch (error) {
+      console.warn('AI preview failed, using fallback:', error);
+      const newChoices = { ...constructionState.choices, [stepId]: value };
+      const fallbackPreview = generateCampaignPreview(newChoices, characterName, characterClass);
+      
+      setConstructionState(prev => ({
+        ...prev,
+        campaignPreview: fallbackPreview
+      }));
+    }
+  }, [characterName, characterClass, constructionState.choices]);
 
   const handleNext = useCallback(() => {
     setConstructionState(prev => ({
