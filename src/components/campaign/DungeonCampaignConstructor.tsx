@@ -4,6 +4,7 @@ import {
   DungeonConstructionState, 
   DungeonConstructionStep,
   DungeonConstructionOption,
+  CampaignConstructionResult,
   DUNGEON_CONSTRUCTION_STEPS,
   DUNGEON_THEMES,
   DungeonTheme,
@@ -17,7 +18,7 @@ import { DUNGEON_CHOICE_OPTIONS } from '../../data/dungeonChoices';
 interface DungeonCampaignConstructorProps {
   isOpen: boolean;
   onClose: () => void;
-  onComplete: (result: any) => void; // TODO: Type properly when campaign result type is defined
+  onComplete: (result: CampaignConstructionResult) => void;
   characterName: string;
   characterClass: string;
 }
@@ -86,14 +87,23 @@ export default function DungeonCampaignConstructor({
 
   const handleComplete = useCallback(() => {
     // Generate final campaign result
-    const result = {
+    const result: CampaignConstructionResult = {
       dungeonId: `dungeon_${Date.now()}`,
       campaignName: generateCampaignName(constructionState.choices),
+      theme: constructionState.choices['theme-selection'] as DungeonTheme,
+      size: constructionState.choices['size-scope'] as DungeonSize,
+      dangerLevel: getDangerLevel(constructionState.choices),
+      primaryGoal: constructionState.choices['primary-goal'] as PrimaryGoal,
+      explorationStyle: constructionState.choices['exploration-style'] as ExplorationStyle,
       choices: constructionState.choices,
-      characterName,
-      characterClass,
-      estimatedDuration: constructionState.estimatedDuration,
-      recommendedLevel: constructionState.recommendedLevel
+      generatedNarrative: constructionState.campaignPreview,
+      firstScenePrompt: generateFirstScenePrompt(constructionState.choices, characterName, characterClass),
+      characterIntegration: `${characterName} the ${characterClass} stands ready to begin this adventure.`,
+      estimatedLength: constructionState.estimatedDuration,
+      keyNPCs: generateKeyNPCs(constructionState.choices),
+      majorEncounters: generateMajorEncounters(constructionState.choices),
+      treasureTypes: getTreasureTypes(constructionState.choices),
+      plotTwists: generatePlotTwists(constructionState.choices)
     };
     
     onComplete(result);
@@ -538,4 +548,182 @@ function generateCampaignName(choices: Record<string, any>): string {
 
 function getOptionsForStep(stepId: string): DungeonConstructionOption[] {
   return DUNGEON_CHOICE_OPTIONS[stepId] || [];
+}
+
+// Additional helper functions for complete campaign generation
+
+function getDangerLevel(choices: Record<string, any>): DungeonDanger {
+  const theme = choices['theme-selection'];
+  const riskLevel = choices['risk-tolerance'] || 3;
+  
+  // Map theme and risk to danger level
+  const themeDanger: Record<string, DungeonDanger> = {
+    'ancient-tomb': 'moderate',
+    'wizard-tower': 'dangerous', 
+    'underground-city': 'dangerous',
+    'natural-cavern': 'low-risk',
+    'abandoned-mine': 'moderate',
+    'cult-temple': 'dangerous',
+    'dragon-lair': 'deadly',
+    'prison-fortress': 'moderate'
+  };
+  
+  const baseDanger = themeDanger[theme] || 'moderate';
+  
+  // Adjust based on risk tolerance
+  if (riskLevel <= 2) return 'low-risk';
+  if (riskLevel >= 5) return 'deadly';
+  
+  return baseDanger;
+}
+
+function generateFirstScenePrompt(choices: Record<string, any>, characterName: string, characterClass: string): string {
+  const theme = choices['theme-selection'];
+  const entryMethod = choices['entry-method'];
+  const goal = choices['primary-goal'];
+  
+  const themeData = DUNGEON_THEMES[theme as DungeonTheme];
+  
+  let prompt = `You are ${characterName}, a ${characterClass} standing before ${themeData?.name || 'a mysterious location'}. `;
+  prompt += `${themeData?.atmosphere || 'The air is filled with mystery and danger.'}\n\n`;
+  
+  if (goal) {
+    const goalDescription: Record<string, string> = {
+      'treasure-hunt': 'Legends speak of ancient treasures hidden within.',
+      'rescue-mission': 'Someone important to you is trapped inside and needs rescue.',
+      'investigation': 'Strange events have been traced to this location.',
+      'elimination': 'A dangerous threat lurks within that must be destroyed.',
+      'artifact-retrieval': 'A powerful artifact awaits those brave enough to claim it.',
+      'escape': 'You find yourself trapped and must find a way out.'
+    };
+    prompt += `${goalDescription[goal] || 'Your purpose here is unclear, but danger awaits.'}\n\n`;
+  }
+  
+  return prompt + 'Your adventure begins now...';
+}
+
+function generateKeyNPCs(choices: Record<string, any>): string[] {
+  const theme = choices['theme-selection'];
+  const companions = choices['party-composition'] || [];
+  
+  const npcs: string[] = [];
+  
+  // Add companions
+  if (Array.isArray(companions)) {
+    npcs.push(...companions.map((comp: string) => `Companion: ${comp}`));
+  }
+  
+  // Add theme-based NPCs
+  const themeNPCs: Record<string, string[]> = {
+    'ancient-tomb': ['Ancient Guardian', 'Tomb Robber', 'Undead Priest'],
+    'wizard-tower': ['Mad Apprentice', 'Construct Servant', 'Rival Wizard'],
+    'underground-city': ['City Elder', 'Underground Merchant', 'Faction Leader'],
+    'natural-cavern': ['Hermit Dweller', 'Cave Beast', 'Lost Explorer'],
+    'abandoned-mine': ['Ghost of Miner', 'Claim Jumper', 'Mining Foreman'],
+    'cult-temple': ['Dark Cultist', 'Possessed Priest', 'Temple Guardian'],
+    'dragon-lair': ['Dragon', 'Kobold Servant', 'Treasure Hunter'],
+    'prison-fortress': ['Prison Warden', 'Escaped Prisoner', 'Guard Captain']
+  };
+  
+  const defaultNPCs = themeNPCs[theme] || ['Mysterious Figure', 'Local Guide', 'Rival Adventurer'];
+  npcs.push(...defaultNPCs.slice(0, 2));
+  
+  return npcs;
+}
+
+function generateMajorEncounters(choices: Record<string, any>): string[] {
+  const theme = choices['theme-selection'];
+  const creatures = choices['creature-types'] || [];
+  const goal = choices['primary-goal'];
+  
+  const encounters: string[] = [];
+  
+  // Add creature-based encounters
+  if (Array.isArray(creatures)) {
+    encounters.push(...creatures.map((creature: string) => `${creature} encounter`));
+  }
+  
+  // Add theme-specific encounters
+  const themeEncounters: Record<string, string[]> = {
+    'ancient-tomb': ['Trapped Chamber', 'Undead Ambush', 'Collapsing Ceiling'],
+    'wizard-tower': ['Magic Gone Wild', 'Reality Distortion', 'Animated Laboratory'],
+    'underground-city': ['Faction Conflict', 'Underground Politics', 'City Guards'],
+    'natural-cavern': ['Cave-in Danger', 'Underground River', 'Territorial Beasts'],
+    'abandoned-mine': ['Gas Pocket Explosion', 'Structural Collapse', 'Mining Equipment'],
+    'cult-temple': ['Ritual Interruption', 'Summoning Circle', 'Dark Ceremony'],
+    'dragon-lair': ['Dragon Confrontation', 'Treasure Hoard', 'Kobold Army'],
+    'prison-fortress': ['Guard Patrol', 'Escape Attempt', 'Fortress Siege']
+  };
+  
+  const themeSpecific = themeEncounters[theme] || ['Mystery Encounter', 'Combat Challenge', 'Puzzle Room'];
+  encounters.push(...themeSpecific);
+  
+  return encounters.slice(0, 4);
+}
+
+function getTreasureTypes(choices: Record<string, any>): string[] {
+  const treasureFocus = choices['treasure-focus'] || [];
+  const theme = choices['theme-selection'];
+  
+  const treasures: string[] = [];
+  
+  // Add selected treasure types
+  if (Array.isArray(treasureFocus)) {
+    treasures.push(...treasureFocus);
+  } else if (treasureFocus) {
+    treasures.push(treasureFocus);
+  }
+  
+  // Add theme-appropriate treasures
+  const themeTreasures: Record<string, string[]> = {
+    'ancient-tomb': ['Ancient coins', 'Burial goods', 'Cursed jewelry'],
+    'wizard-tower': ['Magic items', 'Spell scrolls', 'Arcane components'],
+    'underground-city': ['Rare gems', 'Cultural artifacts', 'Underground currency'],
+    'natural-cavern': ['Natural crystals', 'Rare minerals', 'Cave pearls'],
+    'abandoned-mine': ['Raw ore', 'Mining tools', 'Precious metals'],
+    'cult-temple': ['Religious artifacts', 'Dark tomes', 'Ritual components'],
+    'dragon-lair': ['Dragon hoard', 'Ancient treasures', 'Legendary items'],
+    'prison-fortress': ['Confiscated goods', 'Weapons cache', 'Official documents']
+  };
+  
+  const themeSpecific = themeTreasures[theme] || ['Gold coins', 'Valuable items'];
+  treasures.push(...themeSpecific.slice(0, 2));
+  
+  return [...new Set(treasures)];
+}
+
+function generatePlotTwists(choices: Record<string, any>): string[] {
+  const complexity = choices['narrative-complexity'];
+  const theme = choices['theme-selection'];
+  const goal = choices['primary-goal'];
+  
+  if (complexity === 'simple') {
+    return ['Unexpected ally appears'];
+  }
+  
+  const twists: string[] = [];
+  
+  // Complexity-based twists
+  if (complexity === 'complex') {
+    twists.push('Nothing is as it seems', 'Hidden faction revealed', 'Betrayal by trusted ally');
+  } else {
+    twists.push('Unexpected complication', 'Hidden truth revealed');
+  }
+  
+  // Theme-specific twists
+  const themeTwists: Record<string, string[]> = {
+    'ancient-tomb': ['Tomb is still occupied', 'Curse activates'],
+    'wizard-tower': ['Tower is sentient', 'Magic backfires'],
+    'underground-city': ['City is not abandoned', 'Political intrigue'],
+    'natural-cavern': ['Cavern is alive', 'Underground civilization'],
+    'abandoned-mine': ['Mine was intentionally sealed', 'Something escaped'],
+    'cult-temple': ['God still listens', 'Ritual succeeded'],
+    'dragon-lair': ['Dragon returns early', 'Treasure is cursed'],
+    'prison-fortress': ['Prisoners were innocent', 'Real criminals escaped']
+  };
+  
+  const themeSpecific = themeTwists[theme] || ['Unexpected discovery'];
+  twists.push(...themeSpecific);
+  
+  return twists.slice(0, complexity === 'complex' ? 3 : 2);
 }

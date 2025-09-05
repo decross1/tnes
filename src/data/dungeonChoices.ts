@@ -530,5 +530,157 @@ export const DUNGEON_CHOICE_OPTIONS: Record<string, DungeonConstructionOption[]>
       popularity: 2,
       tags: ['complex', 'factions', 'moral']
     }
-  ]
+  ],
+
+  'environmental-hazards': [
+    {
+      id: 'cave-ins',
+      title: 'Structural Collapse',
+      description: 'Unstable ceilings and walls threaten to crush the unwary',
+      consequences: ['Blocked passages', 'Crushing damage', 'Escape challenges'],
+      icon: '🪨',
+      difficulty: 3,
+      popularity: 4,
+      tags: ['structural', 'physical', 'blocking']
+    },
+    {
+      id: 'flooding',
+      title: 'Rising Waters',
+      description: 'Underground rivers and flooding threaten to drown explorers',
+      consequences: ['Swimming challenges', 'Equipment loss', 'Time pressure'],
+      icon: '🌊',
+      difficulty: 3,
+      popularity: 3,
+      tags: ['water', 'drowning', 'pressure']
+    },
+    {
+      id: 'toxic-gas',
+      title: 'Poisonous Vapors',
+      description: 'Deadly gases seep from the depths, choking the air',
+      consequences: ['Poison damage', 'Limited visibility', 'Breathing apparatus needed'],
+      icon: '💨',
+      difficulty: 3,
+      popularity: 3,
+      tags: ['poison', 'breathing', 'toxic']
+    },
+    {
+      id: 'extreme-temperatures',
+      title: 'Harsh Climate',
+      description: 'Extreme heat or cold makes survival difficult',
+      consequences: ['Environmental damage', 'Equipment stress', 'Endurance challenges'],
+      icon: '🌡️',
+      difficulty: 2,
+      popularity: 3,
+      tags: ['temperature', 'survival', 'endurance']
+    },
+    {
+      id: 'magical-instability',
+      title: 'Magical Interference',
+      description: 'Wild magic makes spells unpredictable and dangerous',
+      consequences: ['Spell failure', 'Random effects', 'Magical feedback'],
+      icon: '⚡',
+      difficulty: 4,
+      popularity: 2,
+      tags: ['magic', 'unpredictable', 'feedback']
+    }
+  ],
+
+  'party-composition': [
+    {
+      id: 'scholarly-guide',
+      title: 'Knowledgeable Scholar',
+      description: 'An expert on history and lore who can provide crucial information',
+      consequences: ['Lore insights', 'Puzzle help', 'Weakness in combat'],
+      icon: '📚',
+      difficulty: 1,
+      popularity: 4,
+      tags: ['knowledge', 'lore', 'support']
+    },
+    {
+      id: 'veteran-warrior',
+      title: 'Battle-Hardened Fighter',
+      description: 'A skilled combatant who excels in dangerous situations',
+      consequences: ['Combat expertise', 'Tactical advice', 'Limited social skills'],
+      icon: '⚔️',
+      difficulty: 1,
+      popularity: 4,
+      tags: ['combat', 'tactics', 'protection']
+    },
+    {
+      id: 'nimble-scout',
+      title: 'Stealthy Scout',
+      description: 'A reconnaissance expert who can spot traps and dangers',
+      consequences: ['Trap detection', 'Stealth advantages', 'Fragile in combat'],
+      icon: '👁️',
+      difficulty: 2,
+      popularity: 3,
+      tags: ['stealth', 'scouting', 'traps']
+    },
+    {
+      id: 'divine-healer',
+      title: 'Healing Cleric',
+      description: 'A devoted healer who can tend wounds and cure ailments',
+      consequences: ['Healing magic', 'Undead protection', 'Pacifist tendencies'],
+      icon: '✨',
+      difficulty: 1,
+      popularity: 5,
+      tags: ['healing', 'support', 'divine']
+    },
+    {
+      id: 'local-contact',
+      title: 'Connected Local',
+      description: 'Someone with connections and knowledge of the area',
+      consequences: ['Local knowledge', 'Social connections', 'Possible ulterior motives'],
+      icon: '🤝',
+      difficulty: 2,
+      popularity: 3,
+      tags: ['local', 'connections', 'information']
+    },
+    {
+      id: 'rival-group',
+      title: 'Competing Adventurers',
+      description: 'Another party with similar goals but different methods',
+      consequences: ['Competition for resources', 'Potential conflicts', 'Alternative approaches'],
+      icon: '🎭',
+      difficulty: 3,
+      popularity: 2,
+      tags: ['competition', 'conflict', 'alternative']
+    }
+  ],
+
+  'social-encounters': [
+    {
+      id: 'minimal',
+      title: 'Minimal Social Elements',
+      description: 'Few NPCs, focus on exploration and combat',
+      consequences: ['Simple interactions', 'Clear objectives', 'Action-focused'],
+      icon: '⚔️',
+      difficulty: 1,
+      popularity: 3,
+      tags: ['simple', 'action', 'minimal']
+    },
+    {
+      id: 'moderate',
+      title: 'Balanced Social Dynamics',
+      description: 'Some important NPCs with meaningful interactions',
+      consequences: ['Character development', 'Moral choices', 'Information gathering'],
+      icon: '🎭',
+      difficulty: 2,
+      popularity: 4,
+      tags: ['balanced', 'development', 'choices']
+    },
+    {
+      id: 'complex',
+      title: 'Rich Social Web',
+      description: 'Multiple factions, politics, and relationship management',
+      consequences: ['Complex negotiations', 'Faction management', 'Social consequences'],
+      icon: '🕸️',
+      difficulty: 4,
+      popularity: 2,
+      tags: ['complex', 'politics', 'factions']
+    }
+  ],
+
+  // Note: 'risk-tolerance' uses a slider component, no options needed
+  // Note: 'final-customization' uses text input, no options needed
 };
