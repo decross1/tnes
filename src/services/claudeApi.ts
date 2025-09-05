@@ -4,6 +4,11 @@ import type {
   PortraitPromptRequest,
   PortraitPromptResponse 
 } from '../types/api';
+import type {
+  CampaignGenerationRequest,
+  CampaignGenerationResult,
+  CampaignDecision
+} from '../types/streamlinedCampaign';
 
 export interface ClaudeResponse {
   content: string;
@@ -609,6 +614,189 @@ Output only the optimized Stable Diffusion prompt, no explanations or additional
     };
 
     return fallbacks[characterClass as keyof typeof fallbacks] || fallbacks.Fighter;
+  }
+
+  /**
+   * Generate a complete 15-decision D&D campaign based on character and player input
+   */
+  async generateCampaign(request: CampaignGenerationRequest): Promise<CampaignGenerationResult> {
+    console.log('🎯 Generating complete D&D campaign:', {
+      type: request.type,
+      keywords: request.keywords,
+      character: request.characterIntegration.name,
+      class: request.characterIntegration.class
+    });
+
+    const systemPrompt = `You are an expert D&D dungeon master creating an immersive 15-decision campaign. Generate a complete adventure with interconnected choices that create a compelling narrative arc from beginning to end.`;
+
+    const userPrompt = this.buildCampaignGenerationPrompt(request);
+
+    try {
+      const response = await this.makeRequest(userPrompt, {
+        maxTokens: 4000, // Larger for complete campaign
+        temperature: 0.8,
+        system: systemPrompt
+      });
+
+      const campaignResult = this.parseCampaignResponse(response.content, request);
+      
+      console.log('✅ Campaign generated successfully:', {
+        decisionsCount: campaignResult.decisions.length,
+        campaignTitle: campaignResult.title
+      });
+
+      return campaignResult;
+    } catch (error) {
+      console.warn('⚠️ AI campaign generation failed, using fallback');
+      return this.generateFallbackCampaign(request);
+    }
+  }
+
+  private buildCampaignGenerationPrompt(request: CampaignGenerationRequest): string {
+    const { characterIntegration, type, keywords } = request;
+    
+    let prompt = `
+🎯 CAMPAIGN GENERATION REQUEST
+
+📋 CHARACTER INTEGRATION:
+- Name: ${characterIntegration.name}
+- Class: ${characterIntegration.class}
+- Backstory: ${characterIntegration.backstory}
+
+🎲 CAMPAIGN REQUIREMENTS:
+- Type: ${type === 'keywords' ? 'Keyword-guided adventure' : 'Fully random adventure'}
+${keywords && keywords.length > 0 ? `- Keywords to incorporate: ${keywords.join(', ')}` : ''}
+
+📖 GENERATE A COMPLETE 15-DECISION CAMPAIGN:
+
+Create an engaging D&D adventure with exactly 15 interconnected decisions. Each decision should:
+1. Present a clear scenario building on previous choices
+2. Offer 2-4 meaningful choice options (minimum 1, maximum 4)
+3. Have clear consequences that affect the story
+4. Include appropriate ability checks for D&D mechanics
+5. Build toward a satisfying narrative climax and resolution
+
+FORMAT YOUR RESPONSE AS JSON:
+{
+  "title": "Campaign Title",
+  "description": "2-3 sentence campaign overview",
+  "setting": "Where the adventure takes place",
+  "mainGoal": "Primary objective for the character",
+  "decisions": [
+    {
+      "id": 1,
+      "title": "Decision Title",
+      "scenario": "Detailed scenario description (2-3 sentences)",
+      "choices": [
+        {
+          "id": "A",
+          "text": "Choice description",
+          "type": "exploration" | "social" | "combat" | "tactical",
+          "abilityCheck": {
+            "ability": "strength" | "dexterity" | "constitution" | "intelligence" | "wisdom" | "charisma",
+            "dc": 10-20
+          },
+          "consequences": "What happens if chosen"
+        }
+      ]
+    }
+  ]
+}
+
+🎪 STORY ARC GUIDELINES:
+- Decisions 1-3: Introduction and setup
+- Decisions 4-8: Rising action and complications  
+- Decisions 9-12: Climax and major challenges
+- Decisions 13-15: Resolution and consequences
+
+⚔️ CHOICE TYPE DISTRIBUTION:
+- Exploration: Investigation, movement, discovery
+- Social: Dialogue, persuasion, deception
+- Combat: Direct confrontation, tactics
+- Tactical: Planning, resource management, strategy
+
+🎭 INTEGRATE THE CHARACTER:
+- Use ${characterIntegration.name}'s ${characterIntegration.class} abilities naturally
+- Reference their backstory: ${characterIntegration.backstory.slice(0, 200)}...
+- Make choices relevant to their class strengths and weaknesses
+
+${keywords && keywords.length > 0 ? `
+🏷️ KEYWORD INTEGRATION:
+Weave these elements naturally into the story: ${keywords.join(', ')}
+` : ''}
+
+Generate the complete campaign now:
+`;
+
+    return prompt;
+  }
+
+  private parseCampaignResponse(response: string, request: CampaignGenerationRequest): CampaignGenerationResult {
+    try {
+      // Try to extract JSON from the response
+      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const campaignData = JSON.parse(jsonMatch[0]);
+        return {
+          ...campaignData,
+          id: `campaign_${Date.now()}`,
+          characterIntegration: request.characterIntegration,
+          generationType: request.type,
+          keywords: request.keywords || []
+        };
+      }
+      throw new Error('No valid JSON found in response');
+    } catch (error) {
+      console.warn('Failed to parse AI campaign response, using fallback');
+      return this.generateFallbackCampaign(request);
+    }
+  }
+
+  private generateFallbackCampaign(request: CampaignGenerationRequest): CampaignGenerationResult {
+    const { characterIntegration, keywords = [] } = request;
+    
+    return {
+      id: `campaign_fallback_${Date.now()}`,
+      title: `${characterIntegration.name}'s Adventure`,
+      description: `A thrilling adventure for ${characterIntegration.name} the ${characterIntegration.class}, filled with mystery and danger.`,
+      setting: keywords.includes('dungeon') ? 'Ancient Dungeon' : 'Mysterious Wilderness',
+      mainGoal: keywords.includes('treasure') ? 'Find the legendary treasure' : 'Uncover the truth behind recent events',
+      characterIntegration: request.characterIntegration,
+      generationType: request.type,
+      keywords: keywords,
+      decisions: this.generateFallbackDecisions(characterIntegration, keywords)
+    };
+  }
+
+  private generateFallbackDecisions(character: any, keywords: string[]): CampaignDecision[] {
+    // Generate 15 basic decisions as fallback
+    const decisions: CampaignDecision[] = [];
+    
+    for (let i = 1; i <= 15; i++) {
+      decisions.push({
+        id: i,
+        title: `Decision ${i}`,
+        scenario: `${character.name} faces a new challenge in their adventure. The path ahead is uncertain, but your ${character.class} training will guide you.`,
+        choices: [
+          {
+            id: 'A',
+            text: 'Act with courage and determination',
+            type: 'combat',
+            abilityCheck: { ability: 'strength', dc: 12 },
+            consequences: 'You face the challenge head-on'
+          },
+          {
+            id: 'B', 
+            text: 'Use wit and cunning to find another way',
+            type: 'tactical',
+            abilityCheck: { ability: 'intelligence', dc: 13 },
+            consequences: 'You discover an alternative approach'
+          }
+        ]
+      });
+    }
+    
+    return decisions;
   }
 
   /**
