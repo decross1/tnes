@@ -1,6 +1,7 @@
 import { AnimatePresence } from 'framer-motion';
 import useGameStore from './stores/gameStore';
 import MainMenuScreen from './components/screens/MainMenuScreen';
+import GameScreen from './components/screens/GameScreen';
 import CharacterCreation from './components/character/CharacterCreation';
 import CampaignConstructorIntegration from './components/campaign/CampaignConstructorIntegration';
 
@@ -34,19 +35,14 @@ function App() {
         {currentScreen === 'campaignConstructor' && character && (
           <CampaignConstructorIntegration
             onConstructorComplete={() => {
-              // After campaign is constructed, go to game
-              goToMainMenu(); // For now, go back to main menu until game screen is ready
+              // Campaign constructor handles navigation internally
+              console.log('🎯 Campaign constructor completed');
             }}
           />
         )}
 
         {currentScreen === 'game' && (
-          <div style={{ padding: '20px', background: '#e0f0ff', margin: '20px 0' }}>
-            <h2>Game Screen (Placeholder)</h2>
-            <p>Playing as: <strong>{character?.name}</strong></p>
-            <p>Current Slot: {campaigns.currentSlot}</p>
-            <button onClick={goToMainMenu}>Back to Main Menu</button>
-          </div>
+          <GameScreen />
         )}
 
         {/* Character Creation Modal */}

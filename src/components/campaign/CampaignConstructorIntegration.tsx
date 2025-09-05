@@ -14,7 +14,9 @@ export default function CampaignConstructorIntegration({
   const { 
     character,
     updateCampaignSetup,
-    goToGame
+    goToGame,
+    campaigns,
+    saveCampaignToSlot
   } = useGameStore();
 
   const [constructorOpen, setConstructorOpen] = useState(false);
@@ -31,6 +33,7 @@ export default function CampaignConstructorIntegration({
 
   const handleConstructorComplete = (result: any) => {
     console.log('🏗️ Campaign construction complete:', result);
+    console.log('🏗️ About to show result popup with theme:', result.theme);
     
     // Process and store the campaign result
     setCampaignResult(result);
@@ -50,14 +53,28 @@ export default function CampaignConstructorIntegration({
   };
 
   const handleBeginAdventure = () => {
+    console.log('🚀 Beginning adventure...', { 
+      currentSlot: campaigns.currentSlot,
+      hasCharacter: !!character 
+    });
+    
     setResultPopupOpen(false);
     
     // Generate initial scene based on campaign construction
     const initialScene = generateInitialScene(campaignResult);
+    console.log('📜 Generated initial scene:', initialScene);
     
-    // For now, just go to the game screen
-    // TODO: Set up the initial scene in the game state
+    // Go to the game screen
     goToGame();
+    
+    // Use setTimeout to ensure state update has been processed
+    setTimeout(() => {
+      // Save the updated state to the current campaign slot
+      if (campaigns.currentSlot) {
+        console.log('💾 Saving campaign state to slot:', campaigns.currentSlot);
+        saveCampaignToSlot(campaigns.currentSlot);
+      }
+    }, 100);
     
     // Notify parent component
     onConstructorComplete();
@@ -148,12 +165,19 @@ export default function CampaignConstructorIntegration({
 
       {/* Result popup with Pinky image */}
       {campaignResult && (
-        <CampaignResultPopup
-          isOpen={resultPopupOpen}
-          onClose={() => setResultPopupOpen(false)}
-          onBeginAdventure={handleBeginAdventure}
-          campaignResult={campaignResult}
-        />
+        <>
+          {console.log('🎯 Rendering CampaignResultPopup:', { 
+            hasResult: !!campaignResult, 
+            isOpen: resultPopupOpen,
+            resultTheme: campaignResult.theme 
+          })}
+          <CampaignResultPopup
+            isOpen={resultPopupOpen}
+            onClose={() => setResultPopupOpen(false)}
+            onBeginAdventure={handleBeginAdventure}
+            campaignResult={campaignResult}
+          />
+        </>
       )}
     </>
   );

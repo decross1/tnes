@@ -18,6 +18,7 @@ const PINKY_IMAGES = [
   '/images/assets_task_01k41sb6kkfhkb07fwfg7bkvjp_1756701866_img_1.webp'
 ];
 
+
 export default function CampaignPopup({
   isOpen,
   onClose,
@@ -45,6 +46,10 @@ export default function CampaignPopup({
 
   const handleImageLoad = () => {
     setImageLoaded(true);
+  };
+
+  const handleImageError = () => {
+    console.error('Failed to load campaign image:', selectedImage);
   };
 
   if (!isOpen) return null;
@@ -94,6 +99,7 @@ export default function CampaignPopup({
                   imageLoaded ? 'opacity-100' : 'opacity-0 absolute'
                 }`}
                 onLoad={handleImageLoad}
+                onError={handleImageError}
                 initial={{ scale: 1.1 }}
                 animate={{ scale: 1 }}
                 transition={{ duration: 0.8, ease: "easeOut" }}
@@ -212,6 +218,8 @@ export function CampaignResultPopup({
   campaignResult
 }: CampaignResultPopupProps) {
   const getThemeImage = (theme: string) => {
+    console.log('🖼️ Getting theme image for theme:', theme);
+    
     // Map themes to appropriate Pinky images or return random
     const themeImageMap: Record<string, number> = {
       'ancient-tomb': 0,
@@ -222,7 +230,10 @@ export function CampaignResultPopup({
     };
     
     const imageIndex = themeImageMap[theme] ?? themeImageMap.default;
-    return PINKY_IMAGES[imageIndex];
+    const selectedImageUrl = PINKY_IMAGES[imageIndex];
+    console.log('🖼️ Selected image URL:', selectedImageUrl, 'for theme:', theme, 'at index:', imageIndex);
+    
+    return selectedImageUrl;
   };
 
   const generateCampaignSummary = () => {

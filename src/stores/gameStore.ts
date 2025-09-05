@@ -139,8 +139,38 @@ const initialCampaign: CampaignSetup = {
 
 const initialCampaigns = {
   slots: [
-    { id: 'slot-1', isEmpty: true },
-    { id: 'slot-2', isEmpty: true }
+    { 
+      id: 'slot-1', 
+      isEmpty: false,
+      character: {
+        ...createCharacter('Wizard', 'Pinky'),
+        portraitUrl: '/images/assets_task_01k41sb6kkfhkb07fwfg7bkvjp_1756701866_img_0.webp',
+        backstory: 'A mysterious spellcaster with a haunting melody that echoes through forgotten dungeons.'
+      },
+      campaign: {
+        id: 'campaign-pinky',
+        name: "Pinky's Musical Quest",
+        createdAt: new Date(),
+        lastPlayed: new Date()
+      },
+      gameState: {} as any // Will be populated when campaign is actually played
+    },
+    { 
+      id: 'slot-2', 
+      isEmpty: false,
+      character: {
+        ...createCharacter('Fighter', 'Poochi'),
+        portraitUrl: '/images/20250825_1915_Neon-Bard%27s%20Quest_simple_compose_01k3j2egxye9ga38d9p17xd5mq.png',
+        backstory: 'A brave warrior who fights to protect the innocent and seek ancient treasures.'
+      },
+      campaign: {
+        id: 'campaign-poochi',
+        name: "Poochi's Adventure",
+        createdAt: new Date(),
+        lastPlayed: new Date()
+      },
+      gameState: {} as any // Will be populated when campaign is actually played
+    }
   ] as CampaignSlot[],
   currentSlot: null as string | null,
   showCampaignManager: false
@@ -588,7 +618,7 @@ const useGameStore = create<ExtendedGameState & ExtendedGameActions>()(
       }),
       {
         name: 'dnd-adventure-game',
-        version: 2, // Increment version for new state structure
+        version: 3, // Increment version to reset localStorage with new campaign data
       }
     ),
     { name: 'ExtendedGameStore' }
