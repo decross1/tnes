@@ -10,19 +10,18 @@
 
 **Rationale**: Mocks hide real-world complexity and integration challenges. Build production-ready architecture from day one.
 
-## Project Status: CHARACTER DESIGN WORKFLOW COMPLETE ✅ → BACKEND PROXY COMPLETE ✅
-**Current Phase**: Character design workflow with AI-powered backstory generation complete, backend proxy server implemented for real Claude API integration
+## Project Status: UI SYSTEM COMPLETE ✅ → DUNGEON CAMPAIGN CONSTRUCTOR 🏰
+**Current Phase**: Character design and GameScreen complete. Now implementing the 15-step dungeon campaign construction workflow that creates personalized campaigns with interconnected decision trees, enhanced choice architecture, and dynamic AI generation.
 
 ## Project Context
 You are helping build a dynamic choose-your-own-adventure D&D game where:
 - Players create personalized characters with AI-generated backstories and portraits
-- Binary choices at each decision point with D&D dice mechanics
-- AI generates dynamic story content based on character and campaign keywords
-- Each scene includes AI-generated images
-- Three-tier keyword system drives personalized narrative evolution
-- Story scroll tracks all decisions, rolls, and character development
-- Campaign cards display character portraits and current progress
-- In-game character profiles provide complete character sheets
+- Advanced choice architecture with exploration, social, combat, and tactical options
+- AI generates dynamic story content using enhanced keyword integration system
+- Campaign generation workflow creates 10-15 interconnected decision scenarios
+- World persistence engine tracks locations, NPCs, quests, and faction relationships
+- Enhanced narrative techniques using SAPI method (Sensory, Atmosphere, Points of Interest, Immediate)
+- Dynamic difficulty scaling based on character background and player performance
 
 ## ✅ COMPLETED FEATURES (v0.2.0)
 
@@ -86,27 +85,59 @@ You are helping build a dynamic choose-your-own-adventure D&D game where:
 - ✅ Smooth animations and transitions
 - ✅ Loading states and error handling
 
-## 🎭 CHARACTER DESIGN WORKFLOW (COMPLETE ✅)
+## 🏰 DUNGEON CAMPAIGN CONSTRUCTOR (CURRENT FOCUS)
 
-### Game Initialization Flow
+### Campaign Generation Workflow
 ```
-[Start] → [Character Selection] → [Visual Keywords] → [Backstory Options] → [Campaign Setup] → [Game Begin]
+[Character Complete] → [Dungeon Theme] → [15 Construction Steps] → [AI Campaign Build] → [First Scene] → [10-15 Connected Decisions]
 ```
 
-### Character Creation Interface
+### Dungeon Construction System
+**Goal**: Create personalized campaigns through 15 meaningful choices that build interconnected adventure experiences:
+
 ```typescript
-interface CharacterCreationState {
-  selectedClass: 'Fighter' | 'Rogue' | 'Wizard' | 'Cleric';
-  characterName: string;
-  visualKeywords: string[];  // NEW: For portrait generation
-  backstoryMethod: 'ai-generate' | 'custom-write' | 'keywords' | 'skip';
-  backstoryContent?: string;
-  backstoryKeywords?: string[];
-  portraitUrl?: string;
-  portraitPrompt?: string;
-  isGeneratingPortrait?: boolean;
-  portraitGenerationError?: string;
+interface DungeonConstructionState {
+  currentStep: number;        // 1-15 construction steps
+  totalSteps: number;         // Always 15
+  isComplete: boolean;
+  choices: Record<string, any>; // Player's construction choices
+  unlockedSteps: string[];    // Dependency-based step unlocking
+  campaignPreview: string;    // AI-generated preview
+  estimatedDuration: number;  // Campaign length in hours
+  recommendedLevel: number;   // Starting level recommendation
 }
+```
+
+### The 15 Construction Steps System
+Each step builds on previous choices with dependency unlocking:
+
+1. **🏛️ Theme Selection** → Unlocks: Size/Scope, Entry Method
+2. **📐 Size & Scope** → Unlocks: Danger Level  
+3. **🚪 Entry Method** → Unlocks: Primary Goal
+4. **🎯 Primary Objective** → Unlocks: Secondary Goals
+5. **📋 Secondary Goals** → Unlocks: Exploration Style
+6. **🧭 Exploration Style** → Unlocks: Risk Tolerance, Party Composition
+7. **⚖️ Risk vs Reward** → Unlocks: Environmental Hazards
+8. **👥 Companions & Allies** → Unlocks: Social Encounters  
+9. **🌊 Environmental Challenges** → Unlocks: Creature Types
+10. **🐉 Primary Inhabitants** → Unlocks: Magical Elements
+11. **✨ Arcane Influences** → Unlocks: Treasure Focus
+12. **💎 Treasure Preferences** → Unlocks: Narrative Complexity
+13. **💬 Social Dynamics** → Unlocks: Narrative Complexity
+14. **📚 Story Depth** → Unlocks: Final Customization  
+15. **🎨 Personal Touches** → Completes Construction
+
+### Dungeon Theme Options (8 Core Types)
+```typescript
+type DungeonTheme = 
+  | 'ancient-tomb'     // ⚱️ Burial sites with undead guardians
+  | 'wizard-tower'     // 🗼 Vertical magical laboratories
+  | 'underground-city' // 🏛️ Vast subterranean metropolis
+  | 'natural-cavern'   // 🕳️ Organic cave systems
+  | 'abandoned-mine'   // ⛏️ Industrial tunnels and shafts
+  | 'cult-temple'      // ⛪ Religious sites with dark rituals
+  | 'dragon-lair'      // 🐉 Treasure hoards and ancient power
+  | 'prison-fortress'; // 🏰 Fortified containment complex
 ```
 
 ### Visual Keyword Input System
@@ -314,13 +345,15 @@ interface ExtendedGameState extends GameState {
 - ✅ **Campaign Management**: Multi-slot save/load system
 - ✅ **Portrait Generation**: Character portrait with loading states
 
-### 🎯 Phase 2: AI Story Generation (CURRENT FOCUS)
-- 🟡 **Scene Generation**: Dynamic story content with keyword integration
-- 🟡 **Binary Choice System**: D&D-style decision points with ability checks
-- 🟡 **Dice Roll Integration**: Outcome generation based on roll results
-- 🟡 **Dynamic Keyword Extraction**: Auto-extract keywords from player actions
-- 🟡 **Story Arc Tracking**: Progression through introduction/rising/climax/resolution
-- 🟡 **Campaign Keywords**: Three-tier keyword weighting system
+### 🎯 Phase 2: Dungeon Campaign Constructor (CURRENT FOCUS)
+- 🟡 **DungeonConstructor Component**: 15-step campaign construction interface
+- 🟡 **Theme Selection System**: 8 dungeon themes with visual cards and descriptions
+- 🟡 **Dependency Management**: Step unlocking based on previous choices
+- 🟡 **Campaign Preview Generator**: AI-generated campaign summaries
+- 🟡 **Enhanced Choice Architecture**: Exploration, social, combat, tactical options
+- 🟡 **SAPI Narrative Method**: Sensory, Atmosphere, Points of Interest, Immediate
+- 🟡 **World Persistence Engine**: Location, NPC, quest, and faction tracking
+- 🟡 **Dynamic Difficulty Scaling**: Adjusts based on character background and performance
 
 ### Phase 3: Game Mechanics Enhancement
 - 🟡 **Visual Keyword Integration**: Character portrait keyword system
@@ -344,64 +377,76 @@ interface ExtendedGameState extends GameState {
 - 🟡 **Deployment**: Production hosting and CI/CD
 - 🟡 **Mobile Optimization**: Touch-friendly interface improvements
 
-## 🛠️ NEW COMPONENTS TO BUILD
+## 🛠️ DUNGEON CAMPAIGN CONSTRUCTOR COMPONENTS
 
-### 1. CharacterKeywordInput.tsx
-- Tag-based input for visual descriptors
-- Categories: Physical, Equipment, Style, Mood
-- Class-appropriate keyword suggestions
-- Maximum 5-7 keywords validation
-- Integration with portrait generation
+### 1. DungeonConstructor.tsx (PRIMARY COMPONENT)
+- 15-step guided campaign construction interface
+- Progress indicator showing current step (1-15)
+- Dependency-based step unlocking system
+- Construction choices persistence and validation
+- AI-generated campaign preview updates
+- Estimated duration and difficulty calculations
 
-### 2. CampaignCard.tsx
-- Campaign continuation card display
-- Character portrait integration
-- Current decision preview (50 char limit)
-- Progress indicator and basic stats
-- Continue campaign button
+### 2. ThemeSelection.tsx
+- Visual grid of 8 dungeon theme cards
+- Each card shows icon, name, description, atmosphere
+- Difficulty and size recommendations per theme
+- Visual preview of common enemies and aesthetics
+- Unlocks Size/Scope and Entry Method steps
 
-### 3. CharacterProfileModal.tsx
-- In-game character sheet overlay
-- Two-column layout (desktop), single column (mobile)
-- Sections: Portrait & Identity, Ability Scores, Combat Stats, Background
-- Collapsible backstory and campaign status
-- Modal behavior with backdrop blur
+### 3. DungeonStepCard.tsx
+- Reusable component for construction steps
+- Supports: single-select, multi-select, slider, text-input
+- Conditional rendering based on choice type
+- Dependency checking and step unlocking logic
+- Choice validation and consequence preview
 
-### 4. PortraitDisplay.tsx
-- Reusable portrait component
-- Multiple size variants (thumbnail, profile, full)
-- Loading states with class icon shimmer
-- Error state with default class portrait fallback
-- 3:4 aspect ratio maintenance
+### 4. ConstructionProgress.tsx
+- Visual progress indicator (1-15 steps)
+- Completed, current, and locked step states
+- Step navigation with dependency enforcement
+- Campaign preview sidebar with real-time updates
+- Construction summary and choice review
 
-### 5. CharacterProfileButton.tsx
-- Bottom navigation trigger for profile modal
-- Integration with game UI layout
-- Accessible keyboard navigation
+### 5. CampaignPreviewGenerator.tsx
+- AI-powered campaign summary generation
+- Real-time updates based on construction choices
+- Integration with three-tier keyword system
+- Estimated duration and difficulty calculations
+- First scene preview generation
 
-### 6. Enhanced CharacterCreation.tsx
-- Class selection with visual cards
-- Character naming interface  
-- Visual keyword input step
-- Backstory generation options
-- Portrait generation integration
+### 6. Enhanced SceneGenerator.tsx
+- SAPI method implementation (Sensory, Atmosphere, Points of Interest, Immediate)
+- Enhanced choice architecture with 4 choice types:
+  - **Exploration**: Movement, investigation, environmental interaction
+  - **Social**: Dialogue, negotiation, relationship building
+  - **Combat**: Direct confrontation, tactical positioning
+  - **Tactical**: Planning, resource management, strategic thinking
+- Dynamic difficulty scaling based on character and choices
+- World persistence integration
 
-### 7. Enhanced KeywordInput.tsx (Backstory)
-- Tag-based input system for backstory keywords
-- Suggestion chips with categories
-- Keyword validation and weighting
-- Separate from visual keywords
+### 7. WorldPersistenceEngine.tsx
+- Location tracking and relationship management
+- NPC relationship and reputation systems
+- Quest state management (main and side quests)
+- Faction influence and politics tracking
+- Environmental state persistence
 
-### 8. CampaignSetup.tsx  
-- Mode selection (random vs guided)
-- Tone selector with descriptions
-- Starting location picker
-- Campaign keyword integration
+### 8. Enhanced ChoiceArchitecture.tsx
+- Four choice types with distinct mechanics:
+  - **Exploration**: Perception, Investigation, Athletics checks
+  - **Social**: Persuasion, Deception, Insight, Intimidation
+  - **Combat**: Initiative, Attack rolls, Damage calculations
+  - **Tactical**: Planning phases, Resource allocation, Strategy
+- Ability check integration with character stats
+- Consequence chains based on choice types
 
-### 9. BackstoryGenerator.tsx
-- Multiple generation methods
-- Preview and editing capabilities
-- Integration with keyword system
+### 9. DifficultyScaler.tsx
+- Character background analysis for difficulty adjustment
+- Player performance tracking and adaptation
+- Challenge rating calculations
+- Reward scaling based on difficulty and performance
+- Accessibility options for different play styles
 
 ## 📁 CURRENT FILE STRUCTURE (v0.2.0)
 ```
@@ -473,39 +518,188 @@ tnes/                      # 🎯 PROJECT ROOT
 └── README.md                   # ✅ Project documentation
 ```
 
-## 🎯 EXAMPLE CHARACTER DESIGN FLOW
+## 🏰 DUNGEON CAMPAIGN CONSTRUCTION EXAMPLE
 ```
-1. Player selects Fighter class
-2. Names character "Marcus Brightblade"
-3. Adds visual keywords: ["scarred", "heavy armor", "battle-worn", "determined"]
-4. Claude generates portrait prompt incorporating keywords and class
-5. Stable Diffusion generates character portrait
-6. Player chooses "Build from Keywords" backstory option
-7. Adds backstory keywords: ["revenge", "noble house", "cursed sword"]
-8. AI generates backstory incorporating all keywords
-9. Player sets up campaign with "guided" mode
-10. Adds campaign keywords: ["political intrigue", "ancient magic"]
-11. Selects "dark fantasy" tone and "city" starting location  
-12. Campaign card displays with character portrait and stats
-13. Game begins with personalized opening scene
-14. Character profile accessible via bottom navigation during gameplay
-15. All keywords influence future story generation
+1. Player completes character creation: Fighter "Marcus Brightblade"
+2. Enters Dungeon Constructor - sees 15-step progress indicator
+3. **Step 1**: Selects "Ancient Tomb" theme → Unlocks Steps 2 & 3
+4. **Step 2**: Chooses "Medium" size scope → Unlocks Step 7 (Risk Tolerance)
+5. **Step 3**: Selects "Hidden Entrance" entry method → Unlocks Step 4
+6. **Step 4**: Primary goal "Artifact Retrieval" → Unlocks Step 5
+7. **Step 5**: Adds secondary goals: ["Survive", "Learn History"] → Unlocks Step 6
+8. **Step 6**: Exploration style "Methodical" → Unlocks Steps 7 & 8
+9. **Step 7**: Risk tolerance slider: 60% (moderate risk) → Unlocks Step 9
+10. **Step 8**: Companions: ["Scholarly Guide", "Torch Bearer"] → Unlocks Step 13
+11. **Step 9**: Environmental hazards: ["Cave-ins", "Poison Gas"] → Unlocks Step 10
+12. **Step 10**: Creatures: ["Undead", "Constructs", "Traps"] → Unlocks Step 11
+13. **Step 11**: Magical elements: "Necromantic Aura" → Unlocks Step 12
+14. **Step 12**: Treasure focus: ["Ancient Weapons", "Lost Knowledge"] → Unlocks Step 14
+15. **Step 13**: Social complexity: "Moderate" (competing expeditions) → Unlocks Step 14
+16. **Step 14**: Story depth: "Complex" (multiple plot threads) → Unlocks Step 15
+17. **Step 15**: Personal touches: "Connects to family curse from backstory"
+18. **AI Campaign Generation**: Creates interconnected decision tree with 10-15 scenarios
+19. **First Scene**: "The Crumbling Entrance" with 4 choice types (Exploration/Social/Combat/Tactical)
+20. **World Persistence**: Tracks locations, NPCs, faction relationships, and quest states
 ```
 
-## 💡 AI PROMPT ARCHITECTURE
+## 🧠 AI CAMPAIGN GENERATION ARCHITECTURE
 
-### Backstory Generation Templates
+### Enhanced Choice Architecture (4 Types)
 ```typescript
-const BACKSTORY_PROMPTS = {
-  full: (character: Character) => `...`,
-  keywords: (character: Character, keywords: string[]) => `...`,
-  class_based: (character: Character) => `...`,
-};
+interface EnhancedChoice {
+  id: string;
+  text: string;
+  type: 'exploration' | 'social' | 'combat' | 'tactical';
+  abilityCheck?: {
+    ability: 'strength' | 'dexterity' | 'constitution' | 'intelligence' | 'wisdom' | 'charisma';
+    dc: number;
+    advantage?: boolean;
+    disadvantage?: boolean;
+  };
+  consequences: {
+    success: string;
+    failure: string;
+    criticalSuccess?: string;
+    criticalFailure?: string;
+  };
+  worldStateChanges?: {
+    locations?: string[];
+    npcs?: string[];
+    factions?: string[];
+    quests?: string[];
+  };
+}
 
-const PORTRAIT_PROMPTS = {
-  detailed: (character: Character, backstory: string) => `...`,
-  simple: (character: Character) => `...`,
+// Choice Type Specializations
+const CHOICE_MECHANICS = {
+  exploration: {
+    primaryAbilities: ['dexterity', 'intelligence', 'wisdom'],
+    commonChecks: ['Perception', 'Investigation', 'Athletics', 'Survival'],
+    consequences: ['New locations', 'Hidden passages', 'Environmental hazards']
+  },
+  social: {
+    primaryAbilities: ['charisma', 'wisdom', 'intelligence'], 
+    commonChecks: ['Persuasion', 'Deception', 'Insight', 'Intimidation'],
+    consequences: ['NPC relationships', 'Information gained', 'Faction standing']
+  },
+  combat: {
+    primaryAbilities: ['strength', 'dexterity', 'constitution'],
+    commonChecks: ['Initiative', 'Attack', 'Damage', 'Saving Throws'],
+    consequences: ['HP changes', 'Equipment damage', 'Tactical position']
+  },
+  tactical: {
+    primaryAbilities: ['intelligence', 'wisdom'],
+    commonChecks: ['Strategy', 'Planning', 'Resource Management'],
+    consequences: ['Future advantages', 'Resource allocation', 'Long-term benefits']
+  }
 };
+```
+
+### SAPI Narrative Method
+```typescript
+interface SAPIScene {
+  sensory: {
+    sight: string[];    // Visual details that create atmosphere
+    sound: string[];    // Audio elements for immersion
+    smell: string[];    // Scents that establish environment
+    touch: string[];    // Tactile sensations
+    taste?: string[];   // Optional taste elements
+  };
+  atmosphere: {
+    mood: 'tense' | 'mysterious' | 'peaceful' | 'threatening' | 'wonder';
+    lighting: 'bright' | 'dim' | 'flickering' | 'dark' | 'magical';
+    weather?: string;   // If outdoor/affected location
+    temperature: 'cold' | 'cool' | 'warm' | 'hot' | 'variable';
+  };
+  pointsOfInterest: {
+    interactive: string[];  // Elements players can interact with
+    narrative: string[];    // Story-relevant details
+    hidden: string[];       // Secrets requiring investigation
+    tactical: string[];     // Combat-relevant features
+  };
+  immediate: {
+    urgency: 'none' | 'low' | 'medium' | 'high' | 'critical';
+    timeConstraints?: string;
+    immediateThreat?: string;
+    requiredAction?: string;
+  };
+}
+
+const generateSAPIScene = (constructionChoices: DungeonConstructionResult) => {
+  return `
+  You are generating a D&D scene using the SAPI method:
+  
+  SENSORY: Create rich sensory details for ${constructionChoices.theme}
+  ATMOSPHERE: Establish ${constructionChoices.dangerLevel} danger mood
+  POINTS OF INTEREST: Include interactive elements matching ${constructionChoices.explorationStyle} style
+  IMMEDIATE: Set urgency level based on ${constructionChoices.primaryGoal}
+  
+  Construction Context: ${JSON.stringify(constructionChoices.choices)}
+  Character Integration: ${constructionChoices.characterIntegration}
+  
+  Generate a scene that provides exactly 4 choices:
+  - 1 Exploration choice (investigation/movement)
+  - 1 Social choice (interaction with NPCs/environment)  
+  - 1 Combat choice (direct confrontation)
+  - 1 Tactical choice (planning/strategy)
+  
+  Each choice should have clear ability check requirements and consequences.
+  `;
+};
+```
+
+### World Persistence Engine
+```typescript
+interface WorldState {
+  locations: Map<string, LocationState>;
+  npcs: Map<string, NPCState>;
+  factions: Map<string, FactionState>;
+  quests: Map<string, QuestState>;
+  relationships: Map<string, RelationshipState>;
+  timeline: TimelineEvent[];
+  globalFlags: Map<string, boolean>;
+}
+
+interface LocationState {
+  id: string;
+  name: string;
+  description: string;
+  visited: boolean;
+  accessibility: 'open' | 'locked' | 'hidden' | 'destroyed';
+  connectedLocations: string[];
+  npcsPresent: string[];
+  activeQuests: string[];
+  environmentalHazards: string[];
+  lastVisited?: Date;
+}
+
+interface NPCState {
+  id: string;
+  name: string;
+  role: string;
+  currentLocation: string;
+  relationshipLevel: number; // -100 to 100
+  lastInteraction?: Date;
+  importantDialogue: string[];
+  questsOffered: string[];
+  questsCompleted: string[];
+  alive: boolean;
+  mood: 'hostile' | 'unfriendly' | 'neutral' | 'friendly' | 'helpful';
+}
+
+interface QuestState {
+  id: string;
+  title: string;
+  description: string;
+  type: 'main' | 'side' | 'faction' | 'personal';
+  status: 'available' | 'active' | 'completed' | 'failed' | 'locked';
+  objectives: QuestObjective[];
+  rewards: QuestReward[];
+  timeLimit?: Date;
+  questGiver: string;
+  involvedNPCs: string[];
+  requiredLocations: string[];
+}
 ```
 
 ## 🔧 Development Commands
@@ -683,40 +877,63 @@ interface StoredCharacterProfile {
 }
 ```
 
-## 🚀 IMPLEMENTATION PHASES
+## 🚀 DUNGEON CAMPAIGN CONSTRUCTOR IMPLEMENTATION
 
-### Phase 1: Core Infrastructure (Days 1-2)
-1. **Portrait Service Architecture**: Create AI service layer with Claude integration
-2. **API Integration**: Set up Stable Diffusion and DALL-E fallback systems
-3. **Basic Keyword Input**: Create CharacterKeywordInput component foundation
-4. **Type Definitions**: Extend existing types for portrait and design features
+### Phase 1: Constructor Foundation (Days 1-2)
+1. **DungeonConstructor Component**: Create 15-step construction interface with progress tracking
+2. **Type Definitions**: Implement all dungeon construction types from `/types/dungeonCampaign.ts`
+3. **ThemeSelection UI**: Build visual grid of 8 dungeon themes with cards and descriptions
+4. **Dependency Engine**: Implement step unlocking system based on construction dependencies
 
-### Phase 2: UI Components (Days 3-4)  
-1. **CharacterKeywordInput**: Complete visual descriptor input with categories
-2. **CampaignCard**: Build campaign selection/continuation cards
-3. **CharacterProfileModal**: Create in-game character sheet overlay
-4. **PortraitDisplay**: Reusable portrait component with size variants
+### Phase 2: Construction Steps & Choices (Days 3-4)  
+1. **DungeonStepCard Component**: Reusable step component supporting all choice types
+2. **Choice Validation**: Implement validation logic for each step type
+3. **Campaign Preview**: Real-time AI-generated campaign summaries
+4. **Construction Progress**: Visual progress indicator with step navigation
 
-### Phase 3: Integration (Days 5-6)
-1. **Character Creation Flow**: Connect portrait generation to creation process
-2. **Campaign Management**: Update cards with portraits and progress
-3. **Profile Integration**: Connect modal with game state and navigation
-4. **Storage & Caching**: Implement portrait caching and data persistence
+### Phase 3: Enhanced Choice Architecture (Days 5-6)
+1. **4-Choice Type System**: Implement Exploration, Social, Combat, Tactical choice generation
+2. **SAPI Scene Generation**: Integrate Sensory, Atmosphere, Points of Interest, Immediate method
+3. **World Persistence Engine**: Build location, NPC, quest, and faction tracking
+4. **Dynamic Difficulty Scaling**: Implement character background and performance-based scaling
 
-### Phase 4: Polish & Testing (Day 7)
-1. **Loading States**: Add animations and loading indicators
-2. **Error Handling**: Implement comprehensive error recovery
-3. **Performance Optimization**: Optimize image loading and caching
-4. **Accessibility**: Complete keyboard navigation and screen reader support
-5. **Testing Suite**: Comprehensive testing of all new features
+### Phase 4: Integration & Campaign Generation (Day 7-8)
+1. **AI Campaign Builder**: Generate 10-15 interconnected decision scenarios from construction choices
+2. **First Scene Generation**: Create opening scene with enhanced 4-choice architecture
+3. **GameStore Integration**: Connect constructor with campaign state management
+4. **Campaign Navigation**: Integrate constructor completion with game beginning
 
-## 💡 SUCCESS METRICS & PERFORMANCE TARGETS
-- **Portrait Generation**: Complete within 30 seconds (including prompt generation)
-- **Keyword Input**: Intuitive operation without instructional guidance
-- **Profile Modal**: Opens in under 200ms with smooth animations
-- **Campaign Cards**: Load instantly with cached portraits
-- **Error Recovery**: Zero failed portrait generations result in broken UI
-- **Visual Consistency**: Character portraits maintain consistency across sessions
-- **Mobile Performance**: All interactions remain smooth on mobile devices
+### Phase 5: Testing & Polish (Day 9-10)
+1. **Constructor Flow Testing**: Test all 15 steps with various choice combinations
+2. **Campaign Generation Testing**: Validate AI-generated campaigns match construction choices
+3. **Choice Architecture Testing**: Ensure 4-choice types work with ability checks and consequences
+4. **World Persistence Testing**: Verify state tracking across multiple decisions
+5. **Performance Optimization**: Optimize construction UI and AI generation performance
 
-This comprehensive character design workflow system creates truly personalized D&D adventures with AI-generated portraits that reflect player choices while maintaining visual consistency and performance across all devices!
+## 🎯 SUCCESS METRICS & PERFORMANCE TARGETS
+
+### Dungeon Constructor Performance
+- **Constructor Load Time**: Interface ready in under 500ms
+- **Step Transitions**: Smooth navigation between steps (< 100ms)
+- **Choice Validation**: Real-time validation feedback (< 50ms)
+- **Campaign Preview Updates**: AI-generated preview within 2 seconds
+- **Step Dependency Logic**: Instant unlocking/locking based on choices
+- **Progress Indicator**: Always accurate and responsive
+
+### AI Campaign Generation Performance  
+- **Campaign Construction**: Complete 15-step process in under 30 seconds
+- **First Scene Generation**: Opening scenario ready within 10 seconds
+- **4-Choice Architecture**: Each scene provides exactly 4 distinct choice types
+- **SAPI Implementation**: Rich sensory details in every scene description
+- **World Persistence**: State updates processed instantly (< 100ms)
+- **Difficulty Scaling**: Dynamic adjustments based on player performance
+
+### User Experience Standards
+- **Constructor Intuitive**: No external guidance needed for completion
+- **Choice Consequences**: Clear previews of decision outcomes
+- **Construction Flow**: Logical progression from simple to complex choices
+- **Campaign Preview**: Accurate representation of final adventure
+- **Mobile Optimization**: Full constructor functionality on mobile devices
+- **Accessibility**: Screen reader compatible with keyboard navigation
+
+This comprehensive dungeon campaign constructor creates truly personalized D&D adventures through meaningful player choices that directly influence the generated campaign, world state, and ongoing narrative experience!
