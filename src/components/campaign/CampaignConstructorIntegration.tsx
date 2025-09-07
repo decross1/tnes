@@ -15,6 +15,7 @@ export default function CampaignConstructorIntegration({
   const { 
     character,
     goToGame,
+    goToMainMenu,
     campaigns,
     saveCampaignToSlot,
     setCurrentScene
@@ -210,9 +211,17 @@ export default function CampaignConstructorIntegration({
                     </button>
                     <button
                       onClick={handleStartAdventure}
-                      className="flex-2 py-3 bg-fantasy-crimson text-white font-bold rounded-lg hover:bg-opacity-90 transition-colors"
+                      className="flex-1 py-3 bg-fantasy-crimson text-white font-bold rounded-lg hover:bg-opacity-90 transition-colors"
                     >
                       Begin Adventure! ⚔️
+                    </button>
+                  </div>
+                  <div className="flex justify-center pt-4">
+                    <button
+                      onClick={goToMainMenu}
+                      className="px-4 py-2 text-fantasy-shadow hover:text-fantasy-midnight transition-colors text-sm"
+                    >
+                      🏠 Return to Main Menu
                     </button>
                   </div>
                 </div>

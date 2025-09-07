@@ -334,12 +334,22 @@ What would you like to do next?`,
             <h3 className="text-fantasy-gold font-fantasy font-bold">
               Decision {playState.currentDecision} of {playState.totalDecisions}
             </h3>
-            <button
-              onClick={() => setShowProgress(!showProgress)}
-              className="text-fantasy-bronze hover:text-fantasy-gold transition-colors"
-            >
-              📊
-            </button>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={goToMainMenu}
+                className="px-3 py-1 bg-fantasy-bronze text-fantasy-parchment rounded hover:bg-opacity-80 transition-colors text-sm"
+                title="Return to Main Menu"
+              >
+                🏠 Menu
+              </button>
+              <button
+                onClick={() => setShowProgress(!showProgress)}
+                className="text-fantasy-bronze hover:text-fantasy-gold transition-colors"
+                title="Show Progress"
+              >
+                📊
+              </button>
+            </div>
           </div>
           <div className="w-full bg-gray-700 rounded-full h-2">
             <motion.div
