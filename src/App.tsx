@@ -1,7 +1,7 @@
 import { AnimatePresence } from 'framer-motion';
 import useGameStore from './stores/gameStore';
 import MainMenuScreen from './components/screens/MainMenuScreen';
-import GameScreen from './components/screens/GameScreen';
+import StreamlinedGameScreen from './components/screens/StreamlinedGameScreen';
 import CharacterCreation from './components/character/CharacterCreation';
 import CampaignConstructorIntegration from './components/campaign/CampaignConstructorIntegration';
 
@@ -42,7 +42,7 @@ function App() {
         )}
 
         {currentScreen === 'game' && (
-          <GameScreen />
+          <StreamlinedGameScreen />
         )}
 
         {/* Character Creation Modal */}

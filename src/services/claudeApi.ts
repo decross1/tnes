@@ -7,7 +7,8 @@ import type {
 import type {
   CampaignGenerationRequest,
   CampaignGenerationResult,
-  CampaignDecision
+  CampaignDecision,
+  CampaignPlayState
 } from '../types/streamlinedCampaign';
 
 export interface ClaudeResponse {
@@ -1019,6 +1020,216 @@ Keep it under 150 words and write in second person ("You find yourself...").
       processedKeywords: userKeywords, // Assume all keywords are incorporated in fallback
       confidence: 0.5 // Medium confidence for fallback
     };
+  }
+
+  /**
+   * Generate an expansion pack with 15 new decisions based on completed campaign
+   */
+  async generateExpansionPack(
+    originalCampaign: CampaignGenerationResult,
+    completedPlayState: CampaignPlayState
+  ): Promise<CampaignGenerationResult> {
+    console.log('🚀 Generating expansion pack for completed campaign:', {
+      originalTitle: originalCampaign.title,
+      decisionsCompleted: completedPlayState.decisionHistory.length,
+      characterSurvived: completedPlayState.characterStatus.currentHP > 0
+    });
+
+    const systemPrompt = `You are an expert D&D dungeon master creating a 15-decision expansion pack that continues the story from a completed campaign. Build on previous events while introducing new challenges and storylines.`;
+
+    const userPrompt = this.buildExpansionPackPrompt(originalCampaign, completedPlayState);
+
+    try {
+      const response = await this.makeRequest(userPrompt, {
+        maxTokens: 4000,
+        temperature: 0.8,
+        system: systemPrompt
+      });
+
+      const expansionResult = this.parseExpansionResponse(response.content, originalCampaign, completedPlayState);
+      
+      console.log('✅ Expansion pack generated successfully:', {
+        decisionsCount: expansionResult.decisions.length,
+        expansionTitle: expansionResult.title
+      });
+
+      return expansionResult;
+    } catch (error) {
+      console.warn('⚠️ AI expansion generation failed, using fallback');
+      return this.generateFallbackExpansion(originalCampaign, completedPlayState);
+    }
+  }
+
+  private buildExpansionPackPrompt(
+    originalCampaign: CampaignGenerationResult,
+    completedPlayState: CampaignPlayState
+  ): string {
+    const { characterIntegration } = originalCampaign;
+    const lastDecisions = completedPlayState.decisionHistory.slice(-3);
+    const characterSurvived = completedPlayState.characterStatus.currentHP > 0;
+    
+    return `
+🎯 EXPANSION PACK GENERATION REQUEST
+
+📋 ORIGINAL CAMPAIGN CONTEXT:
+- Title: ${originalCampaign.title}
+- Setting: ${originalCampaign.setting}
+- Main Goal: ${originalCampaign.mainGoal}
+- Character: ${characterIntegration.name} the ${characterIntegration.class}
+- Original Keywords: ${originalCampaign.keywords.join(', ')}
+
+📊 COMPLETED ADVENTURE SUMMARY:
+- Decisions Completed: ${completedPlayState.decisionHistory.length}
+- Character Status: ${characterSurvived ? `Alive (${completedPlayState.characterStatus.currentHP} HP)` : 'Deceased'}
+- Final Choices Made:
+${lastDecisions.map(d => `  • Decision ${d.decisionId}: ${d.choiceText} - ${d.storyOutcome}`).join('\n')}
+
+🎪 EXPANSION PACK REQUIREMENTS:
+
+Create a NEW 15-decision campaign that:
+1. Builds on the consequences of the completed adventure
+2. References key events and choices from the original story
+3. Introduces new challenges while maintaining continuity
+4. ${characterSurvived ? 'Continues the character\'s journey with new goals' : 'Could involve legacy, resurrection, or spiritual continuation'}
+5. Escalates the stakes based on what was accomplished/learned
+
+📖 GENERATE EXACTLY 15 NEW DECISIONS:
+
+Each decision should:
+- Build logically from previous events
+- Offer 2-4 meaningful choices (min 1, max 4)
+- Include appropriate ability checks
+- Reference the character's previous experiences
+- Create new story threads while honoring established ones
+
+FORMAT AS JSON:
+{
+  "title": "Expansion Pack Title (continuing from ${originalCampaign.title})",
+  "description": "2-3 sentence overview connecting to original adventure",
+  "setting": "New or evolved setting based on original consequences",
+  "mainGoal": "New primary objective building on original completion",
+  "decisions": [
+    {
+      "id": 1,
+      "title": "Opening Decision Title",
+      "scenario": "Scenario building on original adventure completion",
+      "choices": [
+        {
+          "id": "A",
+          "text": "Choice description",
+          "type": "exploration" | "social" | "combat" | "tactical",
+          "abilityCheck": {
+            "ability": "strength" | "dexterity" | "constitution" | "intelligence" | "wisdom" | "charisma",
+            "dc": 10-20
+          },
+          "consequences": "What happens if chosen"
+        }
+      ]
+    }
+    // ... repeat for all 15 decisions
+  ]
+}
+
+🔗 STORY CONTINUITY GUIDELINES:
+- Reference specific choices made in original campaign
+- Build on established character development
+- Introduce consequences of previous actions
+- Create new allies/enemies based on past decisions
+- Escalate the scale and stakes appropriately
+
+🎭 CHARACTER INTEGRATION:
+- Use ${characterIntegration.name}'s established personality
+- Reference their growth through the original adventure
+- Build on their ${characterIntegration.class} abilities
+- Consider how previous experiences changed them
+
+Generate the complete expansion pack now:
+`;
+  }
+
+  private parseExpansionResponse(
+    response: string,
+    originalCampaign: CampaignGenerationResult,
+    completedPlayState: CampaignPlayState
+  ): CampaignGenerationResult {
+    try {
+      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const expansionData = JSON.parse(jsonMatch[0]);
+        return {
+          ...expansionData,
+          id: `expansion_${originalCampaign.id}_${Date.now()}`,
+          characterIntegration: originalCampaign.characterIntegration,
+          generationType: 'expansion',
+          keywords: [...originalCampaign.keywords, 'continuation', 'expansion']
+        };
+      }
+      throw new Error('No valid JSON found in expansion response');
+    } catch (error) {
+      console.warn('Failed to parse AI expansion response, using fallback');
+      return this.generateFallbackExpansion(originalCampaign, completedPlayState);
+    }
+  }
+
+  private generateFallbackExpansion(
+    originalCampaign: CampaignGenerationResult,
+    completedPlayState: CampaignPlayState
+  ): CampaignGenerationResult {
+    const { characterIntegration } = originalCampaign;
+    const characterSurvived = completedPlayState.characterStatus.currentHP > 0;
+    
+    return {
+      id: `expansion_fallback_${Date.now()}`,
+      title: `${originalCampaign.title}: The Aftermath`,
+      description: `Following the completion of their original quest, ${characterIntegration.name} faces new challenges that arise from their previous actions. The consequences of past decisions now shape an entirely new adventure.`,
+      setting: `${originalCampaign.setting} and Beyond`,
+      mainGoal: characterSurvived 
+        ? `Deal with the consequences of your previous victory`
+        : `Honor the fallen hero's legacy through spiritual continuation`,
+      characterIntegration: originalCampaign.characterIntegration,
+      generationType: 'expansion',
+      keywords: [...originalCampaign.keywords, 'continuation', 'consequences'],
+      decisions: this.generateFallbackExpansionDecisions(characterIntegration, characterSurvived)
+    };
+  }
+
+  private generateFallbackExpansionDecisions(character: any, characterSurvived: boolean): CampaignDecision[] {
+    const decisions: CampaignDecision[] = [];
+    
+    for (let i = 1; i <= 15; i++) {
+      decisions.push({
+        id: i,
+        title: `Expansion Decision ${i}`,
+        scenario: characterSurvived 
+          ? `${character.name} faces new challenges that stem from their previous adventure. The consequences of past actions now demand attention.`
+          : `The spirit of ${character.name} continues to influence events, with their legacy guiding new heroes who must complete what was started.`,
+        choices: [
+          {
+            id: 'A',
+            text: characterSurvived ? 'Use experience from previous adventure' : 'Honor the fallen hero\'s memory',
+            type: 'tactical',
+            abilityCheck: { ability: 'wisdom', dc: 14 },
+            consequences: 'Past experience guides current action'
+          },
+          {
+            id: 'B',
+            text: 'Embrace new approaches and fresh perspectives',
+            type: 'exploration',
+            abilityCheck: { ability: 'intelligence', dc: 13 },
+            consequences: 'Innovation leads to unexpected outcomes'
+          },
+          {
+            id: 'C',
+            text: 'Seek allies who understand the weight of legacy',
+            type: 'social',
+            abilityCheck: { ability: 'charisma', dc: 15 },
+            consequences: 'Strong bonds form through shared purpose'
+          }
+        ]
+      });
+    }
+    
+    return decisions;
   }
 
   isConfigured(): boolean {

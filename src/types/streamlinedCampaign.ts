@@ -40,7 +40,7 @@ export interface CampaignGenerationResult {
     class: string;
     backstory: string;
   };
-  generationType: 'keywords' | 'random';
+  generationType: 'keywords' | 'random' | 'expansion';
   keywords: string[];
   decisions: CampaignDecision[];
 }

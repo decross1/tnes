@@ -32,6 +32,11 @@ export interface Scene {
   imageUrl?: string;
   choices: Choice[];
   isLoading?: boolean;
+  campaignContext?: {
+    campaignId: string;
+    decisionId: number;
+    totalDecisions: number;
+  };
 }
 
 export interface Choice {
