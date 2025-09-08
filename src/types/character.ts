@@ -5,7 +5,7 @@ export type BackstoryMethod = 'ai-generate' | 'custom-write' | 'keywords' | 'ski
 
 export interface CharacterCreationState {
   isActive: boolean;
-  step: 'class' | 'name' | 'backstory' | 'campaign';
+  step: 'class' | 'name' | 'backstory' | 'confirmation' | 'campaign';
   selectedClass?: 'Fighter' | 'Rogue' | 'Wizard' | 'Cleric';
   characterName?: string;
   backstoryMethod?: BackstoryMethod;

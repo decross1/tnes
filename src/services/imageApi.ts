@@ -45,12 +45,10 @@ class ImageApiService {
     const startTime = Date.now();
     
     try {
-      // 🚫 TEMPORARILY DISABLED - Models Lab API to prevent credit usage
-      // Uncomment when ready to test with real API calls
-      /*
       // Try Models Lab first
       if (this.modelsLabApiKey) {
         try {
+          console.log('🎨 Using Models Lab API for portrait generation');
           const result = await this.generateWithModelsLab(request);
           return {
             ...result,
@@ -65,6 +63,7 @@ class ImageApiService {
       // Try DALL-E as fallback
       if (this.openaiApiKey) {
         try {
+          console.log('🎨 Using DALL-E API for portrait generation');
           const result = await this.generateWithDallE(request.prompt);
           return {
             url: result.url,
@@ -76,7 +75,6 @@ class ImageApiService {
           console.warn('DALL-E generation failed, using fallback:', error);
         }
       }
-      */
       
       // Log what would have been sent to Models Lab (for debugging)
       console.log('🎨 WOULD SEND TO MODELS LAB:', {
@@ -118,10 +116,10 @@ class ImageApiService {
 
     const prompt = this.buildPortraitPrompt(characterClass, backstory, gender, race);
     
-    // 🚫 TEMPORARILY DISABLED - Models Lab API to prevent credit usage
-    /*
+    // Use real API for character portrait generation
     if (this.preferredProvider === 'modelslab' && this.modelsLabApiKey) {
       try {
+        console.log('🎨 Generating character portrait with Models Lab API');
         const result = await this.generateWithModelsLab({
           prompt,
           characterClass,
@@ -140,45 +138,32 @@ class ImageApiService {
         }
       }
     } else if (this.openaiApiKey) {
+      console.log('🎨 Generating character portrait with DALL-E API');
       return await this.generateWithDallE(prompt);
     }
-    */
     
-    // Log what would be generated (for debugging)
-    console.log('🖼️ WOULD GENERATE CHARACTER PORTRAIT:', {
+    // If no API keys available, log and use fallback
+    console.log('🖼️ No API keys available, using placeholder portrait:', {
       characterName: params.characterName,
       characterClass,
       prompt: prompt
     });
     
-    // Return placeholder image
+    // Return placeholder image as fallback
     return {
       url: this.generatePlaceholderPortrait(characterClass),
-      alt_text: `${characterClass} character portrait`,
+      alt_text: `${characterClass} character portrait (placeholder)`,
+      revised_prompt: prompt
     };
   }
 
   private buildPortraitPrompt(characterClass: string, backstory: string, gender: string, race: string): string {
-    // Extract key visual elements from backstory
-    const backstoryContext = backstory.substring(0, 200);
+    // Let backstory drive the visual description completely
+    const technicalSpecs = `character portrait, upper body, detailed face, high quality`;
     
-    const basePrompt = `Fantasy D&D character portrait, ${race} ${characterClass}`;
-    const styleGuide = `digital art, detailed face and upper body, epic fantasy setting, dramatic lighting, high quality`;
-    const classSpecificDetails = this.getClassVisualDetails(characterClass);
-    
-    return `${basePrompt}, ${classSpecificDetails}, ${styleGuide}, character inspired by: ${backstoryContext}`;
+    return `${technicalSpecs}, character inspired by: ${backstory}`;
   }
 
-  private getClassVisualDetails(characterClass: string): string {
-    const details = {
-      Fighter: 'wearing armor, holding weapon, battle-scarred, determined expression, martial bearing',
-      Rogue: 'dark clothing, hood or cloak, daggers, cunning expression, shadowy atmosphere',
-      Wizard: 'robes, staff or spellbook, arcane symbols, wise expression, magical aura',
-      Cleric: 'holy symbol, divine light, serene expression, blessed aura, religious vestments'
-    };
-    
-    return details[characterClass as keyof typeof details] || details.Fighter;
-  }
 
   private async generateWithDallE(prompt: string): Promise<ImageResponse> {
     try {

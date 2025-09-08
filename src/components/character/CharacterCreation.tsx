@@ -28,6 +28,7 @@ export default function CharacterCreation({ onComplete, onCancel }: CharacterCre
   const [portraitUrl, setPortraitUrl] = useState<string>('');
   const [isGeneratingBackstory, setIsGeneratingBackstory] = useState(false);
   const [isGeneratingPortrait, setIsGeneratingPortrait] = useState(false);
+  const [portraitGenerationError, setPortraitGenerationError] = useState<string>('');
 
   const canProceed = () => {
     switch (step) {
@@ -45,6 +46,8 @@ export default function CharacterCreation({ onComplete, onCancel }: CharacterCre
                backstoryMethod === 'skip' || 
                (backstoryMethod === 'keywords' && backstoryKeywords.length > 0) ||
                backstoryMethod === 'ai-generate';
+      case 'confirmation':
+        return !!backstoryContent && !!portraitUrl; // Need both backstory and portrait (since we only get here after successful generation)
       default:
         return true;
     }
@@ -60,6 +63,9 @@ export default function CharacterCreation({ onComplete, onCancel }: CharacterCre
         break;
       case 'backstory':
         await handleBackstoryComplete();
+        break;
+      case 'confirmation':
+        await handleCompleteCharacter();
         break;
       default:
         break;
@@ -120,46 +126,87 @@ export default function CharacterCreation({ onComplete, onCancel }: CharacterCre
     console.log('📖 Final backstory length:', finalBackstory.length, 'characters');
     console.groupEnd();
 
-    // Generate portrait
+    // Generate portrait using the new function
+    await generatePortrait();
+  };
+
+  const handleCompleteCharacter = async () => {
+    // Complete character creation with all generated data
+    onComplete({
+      name: characterName,
+      class: selectedClass,
+      backstory: backstoryContent,
+      portraitUrl: portraitUrl
+    });
+  };
+
+  const handleRetryPortraitGeneration = async () => {
+    // Retry portrait generation with current character data
+    await generatePortrait();
+  };
+
+  const generatePortrait = async () => {
+    if (!characterName || !selectedClass || !backstoryContent) {
+      console.error('❌ Cannot generate portrait: missing character data');
+      return;
+    }
+
     setIsGeneratingPortrait(true);
+    setPortraitGenerationError('');
+    
     try {
-      console.group('🎨 === PORTRAIT GENERATION WORKFLOW ===');
-      console.log('📝 INPUT FOR PORTRAIT:', {
+      console.group('🎨 === PORTRAIT GENERATION RETRY ===');
+      console.log('📝 RETRYING PORTRAIT FOR:', {
         characterName,
         characterClass: selectedClass,
-        backstory: finalBackstory.substring(0, 100) + '...',
-        backstoryLength: finalBackstory.length
+        backstory: backstoryContent.substring(0, 100) + '...',
+        backstoryLength: backstoryContent.length
       });
       
       const portrait = await imageApi.generateCharacterPortrait({
         characterName,
         characterClass: selectedClass,
-        backstory: finalBackstory
+        backstory: backstoryContent
       });
       
-      console.log('✅ PORTRAIT GENERATED:', {
+      console.log('✅ PORTRAIT RETRY RESPONSE:', {
         url: portrait.url,
+        urlLength: portrait.url?.length || 0,
         alt_text: portrait.alt_text,
         revised_prompt: portrait.revised_prompt
       });
+      
+      if (portrait.url && portrait.url.length > 0) {
+        console.log('✅ PORTRAIT RETRY SUCCESSFUL - Moving to confirmation');
+        setPortraitUrl(portrait.url);
+        setPortraitGenerationError('');
+        setStep('confirmation');
+      } else {
+        throw new Error('Portrait generation returned empty URL');
+      }
+      
+      console.groupEnd();
+    } catch (error) {
+      console.error('❌ PORTRAIT RETRY FAILED:', error);
       console.groupEnd();
       
-      setPortraitUrl(portrait.url);
-    } catch (error) {
-      console.error('❌ Failed to generate portrait:', error);
-      console.groupEnd();
-      // Portrait is optional, continue without it
+      setPortraitUrl('');
+      setPortraitGenerationError(`Portrait generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsGeneratingPortrait(false);
     }
+  };
 
-    // Complete character creation
-    onComplete({
-      name: characterName,
-      class: selectedClass,
-      backstory: finalBackstory,
-      portraitUrl: portraitUrl
-    });
+  const handleRestartCharacterCreation = () => {
+    // Reset all state and go back to class selection
+    setSelectedClass('');
+    setCharacterName('');
+    setBackstoryMethod('ai-generate');
+    setBackstoryContent('');
+    setBackstoryKeywords([]);
+    setPortraitUrl('');
+    setPortraitGenerationError('');
+    setStep('class');
   };
 
   const handleBack = () => {
@@ -169,6 +216,9 @@ export default function CharacterCreation({ onComplete, onCancel }: CharacterCre
         break;
       case 'backstory':
         setStep('name');
+        break;
+      case 'confirmation':
+        setStep('backstory');
         break;
       default:
         break;
@@ -189,14 +239,14 @@ export default function CharacterCreation({ onComplete, onCancel }: CharacterCre
           <div>
             <h2 style={{ fontSize: '24px', marginBottom: '8px' }}>Create Your Character</h2>
             <div style={{ display: 'flex', gap: '8px' }}>
-              {['class', 'name', 'backstory'].map((s, index) => (
+              {['class', 'name', 'backstory', 'confirmation'].map((s, index) => (
                 <div
                   key={s}
                   style={{
-                    width: '40px',
+                    width: '30px',
                     height: '4px',
                     borderRadius: '2px',
-                    backgroundColor: ['class', 'name', 'backstory'].indexOf(step) >= index ? '#D4AF37' : '#E5E7EB'
+                    backgroundColor: ['class', 'name', 'backstory', 'confirmation'].indexOf(step) >= index ? '#D4AF37' : '#E5E7EB'
                   }}
                 />
               ))}
@@ -258,18 +308,255 @@ export default function CharacterCreation({ onComplete, onCancel }: CharacterCre
             )}
 
             {step === 'backstory' && (
-              <BackstoryGenerator
-                key="backstory"
-                characterName={characterName}
-                characterClass={selectedClass}
-                method={backstoryMethod}
-                onMethodChange={setBackstoryMethod}
-                content={backstoryContent}
-                onContentChange={setBackstoryContent}
-                keywords={backstoryKeywords}
-                onKeywordsChange={setBackstoryKeywords}
-                isGenerating={isGeneratingBackstory}
-              />
+              <div key="backstory">
+                <BackstoryGenerator
+                  characterName={characterName}
+                  characterClass={selectedClass}
+                  method={backstoryMethod}
+                  onMethodChange={setBackstoryMethod}
+                  content={backstoryContent}
+                  onContentChange={setBackstoryContent}
+                  keywords={backstoryKeywords}
+                  onKeywordsChange={setBackstoryKeywords}
+                  isGenerating={isGeneratingBackstory}
+                />
+                
+                {/* Portrait Generation Status */}
+                {isGeneratingPortrait && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    style={{
+                      marginTop: '24px',
+                      padding: '20px',
+                      backgroundColor: '#F0F8FF',
+                      border: '2px solid #4682B4',
+                      borderRadius: '8px',
+                      textAlign: 'center'
+                    }}
+                  >
+                    <div style={{ fontSize: '24px', marginBottom: '12px' }}>🎨</div>
+                    <h4 style={{ fontSize: '16px', fontWeight: 'bold', color: '#4682B4', marginBottom: '8px' }}>
+                      Generating Your Portrait
+                    </h4>
+                    <p style={{ fontSize: '14px', color: '#666', marginBottom: '16px' }}>
+                      Creating a unique character portrait based on your backstory...
+                    </p>
+                    
+                    {/* Progress Bar */}
+                    <div style={{
+                      width: '100%',
+                      height: '6px',
+                      backgroundColor: '#E0E0E0',
+                      borderRadius: '3px',
+                      overflow: 'hidden',
+                      marginBottom: '12px'
+                    }}>
+                      <div style={{
+                        width: '60%',
+                        height: '100%',
+                        backgroundColor: '#4682B4',
+                        borderRadius: '3px',
+                        animation: 'pulse 2s infinite ease-in-out'
+                      }} />
+                    </div>
+                    
+                    <p style={{ fontSize: '12px', color: '#888', fontStyle: 'italic' }}>
+                      This may take 30-60 seconds...
+                    </p>
+                  </motion.div>
+                )}
+
+                {/* Portrait Generation Error */}
+                {portraitGenerationError && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    style={{
+                      marginTop: '24px',
+                      padding: '20px',
+                      backgroundColor: '#FFF5F5',
+                      border: '2px solid #F56565',
+                      borderRadius: '8px',
+                      textAlign: 'center'
+                    }}
+                  >
+                    <div style={{ fontSize: '24px', marginBottom: '12px' }}>❌</div>
+                    <h4 style={{ fontSize: '16px', fontWeight: 'bold', color: '#F56565', marginBottom: '8px' }}>
+                      Portrait Generation Failed
+                    </h4>
+                    <p style={{ fontSize: '14px', color: '#666', marginBottom: '16px' }}>
+                      {portraitGenerationError}
+                    </p>
+                    
+                    <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+                      <button
+                        onClick={handleRetryPortraitGeneration}
+                        disabled={isGeneratingPortrait}
+                        style={{
+                          padding: '10px 20px',
+                          backgroundColor: '#4299E1',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          cursor: isGeneratingPortrait ? 'not-allowed' : 'pointer',
+                          fontWeight: '500',
+                          fontSize: '14px',
+                          opacity: isGeneratingPortrait ? 0.6 : 1
+                        }}
+                      >
+                        🔄 Try Again
+                      </button>
+                      <button
+                        onClick={() => {
+                          setPortraitGenerationError('');
+                          setPortraitUrl('');
+                          setStep('confirmation');
+                        }}
+                        style={{
+                          padding: '10px 20px',
+                          backgroundColor: '#6B7280',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontWeight: '500',
+                          fontSize: '14px'
+                        }}
+                      >
+                        ⚡ Skip Portrait
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </div>
+            )}
+
+            {step === 'confirmation' && (
+              <motion.div
+                key="confirmation"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                style={{ textAlign: 'center' }}
+                onAnimationComplete={() => {
+                  console.log('🔍 CONFIRMATION STEP REACHED:', {
+                    step,
+                    portraitUrl,
+                    portraitUrlLength: portraitUrl?.length || 0,
+                    backstoryContent: backstoryContent?.substring(0, 50) + '...'
+                  });
+                }}
+              >
+                <h3 style={{ fontSize: '24px', marginBottom: '24px', color: '#8B5A3C' }}>
+                  🎭 Character Complete!
+                </h3>
+                
+                <div style={{ marginBottom: '24px' }}>
+                  {portraitUrl ? (
+                    <img
+                      src={portraitUrl}
+                      alt={`${characterName} portrait`}
+                      style={{
+                        width: '200px',
+                        height: '267px',
+                        objectFit: 'cover',
+                        borderRadius: '12px',
+                        border: '3px solid #D4AF37',
+                        boxShadow: '0 8px 16px rgba(0,0,0,0.3)',
+                        marginBottom: '16px'
+                      }}
+                      onLoad={() => console.log('✅ Portrait image loaded successfully:', portraitUrl)}
+                      onError={() => console.error('❌ Portrait image failed to load:', portraitUrl)}
+                    />
+                  ) : (
+                    <div style={{
+                      width: '200px',
+                      height: '267px',
+                      backgroundColor: '#F4E4BC',
+                      border: '3px solid #D4AF37',
+                      borderRadius: '12px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      margin: '0 auto 16px',
+                      fontSize: '48px'
+                    }}>
+                      {CHARACTER_CLASSES[selectedClass]?.icon}
+                      <div style={{ fontSize: '12px', marginTop: '8px', color: '#8B5A3C' }}>
+                        {isGeneratingPortrait ? 'Generating...' : 'Portrait not available'}
+                      </div>
+                    </div>
+                  )}
+                  <h4 style={{ fontSize: '20px', fontWeight: 'bold', color: '#8B5A3C', marginBottom: '4px' }}>
+                    {characterName}
+                  </h4>
+                  <p style={{ color: '#666', fontSize: '16px', marginBottom: '16px' }}>
+                    Level 1 {selectedClass}
+                  </p>
+                </div>
+
+                <div style={{ 
+                  maxHeight: '200px', 
+                  overflowY: 'auto', 
+                  backgroundColor: '#F9F9F9', 
+                  padding: '16px', 
+                  borderRadius: '8px',
+                  border: '1px solid #E5E7EB',
+                  marginBottom: '24px',
+                  textAlign: 'left'
+                }}>
+                  <h5 style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '12px', color: '#8B5A3C' }}>
+                    📖 Your Story:
+                  </h5>
+                  <p style={{ fontSize: '14px', lineHeight: '1.6', color: '#333' }}>
+                    {backstoryContent}
+                  </p>
+                </div>
+
+                <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+                  <button
+                    onClick={handleRestartCharacterCreation}
+                    style={{
+                      padding: '12px 24px',
+                      backgroundColor: '#6B7280',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontWeight: '500',
+                      fontSize: '14px'
+                    }}
+                  >
+                    🔄 Start Over
+                  </button>
+                  <button
+                    onClick={handleCompleteCharacter}
+                    style={{
+                      padding: '12px 24px',
+                      backgroundColor: '#D4AF37',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontWeight: 'bold',
+                      fontSize: '14px'
+                    }}
+                  >
+                    ⚔️ Begin Adventure!
+                  </button>
+                </div>
+
+                <p style={{ 
+                  fontSize: '12px', 
+                  color: '#999', 
+                  marginTop: '16px',
+                  fontStyle: 'italic'
+                }}>
+                  ⚠️ Starting over will require re-entering all character details
+                </p>
+              </motion.div>
             )}
           </AnimatePresence>
 
@@ -298,28 +585,38 @@ export default function CharacterCreation({ onComplete, onCancel }: CharacterCre
               Back
             </button>
 
-            <div style={{ textAlign: 'center', fontSize: '14px', color: '#666' }}>
-              {step === 'class' && 'Choose your character class'}
-              {step === 'name' && 'Name your character'}
-              {step === 'backstory' && 'Create your backstory'}
-            </div>
+            {step !== 'confirmation' && (
+              <>
+                <div style={{ textAlign: 'center', fontSize: '14px', color: '#666' }}>
+                  {step === 'class' && 'Choose your character class'}
+                  {step === 'name' && 'Name your character'}
+                  {step === 'backstory' && 'Create your backstory'}
+                </div>
 
-            <button
-              onClick={handleNext}
-              disabled={!canProceed() || isGeneratingBackstory || isGeneratingPortrait}
-              className="choice-button"
-              style={{
-                padding: '12px 24px',
-                opacity: (!canProceed() || isGeneratingBackstory || isGeneratingPortrait) ? 0.5 : 1,
-                cursor: (!canProceed() || isGeneratingBackstory || isGeneratingPortrait) ? 'not-allowed' : 'pointer'
-              }}
-            >
-              {step === 'backstory' ? (
-                isGeneratingBackstory ? 'Generating Story...' :
-                isGeneratingPortrait ? 'Creating Portrait...' :
-                'Create Character'
-              ) : 'Next'}
-            </button>
+                <button
+                  onClick={handleNext}
+                  disabled={!canProceed() || isGeneratingBackstory || isGeneratingPortrait}
+                  className="choice-button"
+                  style={{
+                    padding: '12px 24px',
+                    opacity: (!canProceed() || isGeneratingBackstory || isGeneratingPortrait) ? 0.5 : 1,
+                    cursor: (!canProceed() || isGeneratingBackstory || isGeneratingPortrait) ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  {step === 'backstory' ? (
+                    isGeneratingBackstory ? 'Generating Story...' :
+                    isGeneratingPortrait ? 'Creating Portrait...' :
+                    'Generate Character'
+                  ) : 'Next'}
+                </button>
+              </>
+            )}
+
+            {step === 'confirmation' && (
+              <div style={{ textAlign: 'center', fontSize: '14px', color: '#666' }}>
+                Review your character and choose to proceed or start over
+              </div>
+            )}
           </div>
           
           {/* Development Only: Prompt Debugger */}

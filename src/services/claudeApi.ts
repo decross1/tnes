@@ -530,33 +530,27 @@ Create ${name} the ${characterClass}'s backstory:`;
   async generatePortraitPrompt(request: PortraitPromptRequest): Promise<PortraitPromptResponse> {
     const { characterClass, characterName, userKeywords, backstoryContent, campaignTone } = request;
 
-    const systemPrompt = `You are an expert at creating detailed visual descriptions for fantasy character portraits. Generate a Stable Diffusion prompt that will create a high-quality D&D character portrait. Focus on visual details that can be rendered well by AI image generators.`;
+    const systemPrompt = `You are an expert at creating visual descriptions for character portraits. Generate a Stable Diffusion prompt that focuses primarily on the character's backstory and personality rather than fantasy stereotypes. Avoid class-specific clichés.`;
 
-    const backstoryHints = backstoryContent ? backstoryContent.substring(0, 150) + '...' : '';
+    const backstoryHints = backstoryContent || '';
     const keywordList = userKeywords.join(', ');
     
-    const prompt = `Create a detailed visual description for a fantasy character portrait suitable for Stable Diffusion.
+    const prompt = `Create a visual description for a character portrait based primarily on their backstory.
 
-Character: ${characterName}, a ${characterClass}
-User-provided visual descriptors: ${keywordList}
-${backstoryHints ? `Backstory context: ${backstoryHints}` : ''}
-${campaignTone ? `Campaign tone: ${campaignTone}` : ''}
+Character name: ${characterName}
+${keywordList ? `Visual keywords: ${keywordList}` : ''}
+Character's backstory: ${backstoryHints}
 
 Generate a Stable Diffusion prompt that:
-1. Incorporates all user keywords naturally into the visual description
-2. Includes appropriate ${characterClass}-specific visual elements (equipment, stance, etc.)
-3. Maintains D&D fantasy aesthetic
-4. Suggests appropriate pose and facial expression
-5. Specifies art style: "fantasy art, detailed digital painting, character portrait"
-6. Uses proper Stable Diffusion formatting and keywords
+1. Draws visual inspiration primarily from the backstory details
+2. Incorporates any provided visual keywords naturally
+3. Focuses on the character's personality and background rather than stereotypes
+4. Suggests appropriate expression and demeanor based on their story
+5. Keeps technical specs minimal: "character portrait, upper body, detailed face, high quality"
 
-Requirements:
-- 3:4 portrait aspect ratio
-- Focus on upper body and face
-- High quality, detailed rendering
-- Fantasy/medieval setting appropriate
+Avoid generic fantasy/class stereotypes. Let the backstory drive the visual description.
 
-Output only the optimized Stable Diffusion prompt, no explanations or additional text.`;
+Output only the optimized Stable Diffusion prompt, no explanations.`;
 
     try {
       const response = await this.makeRequest(prompt, {
@@ -1003,17 +997,10 @@ Keep it under 150 words and write in second person ("You find yourself...").
   }
 
   private getFallbackPortraitPrompt(characterClass: string, characterName: string, userKeywords: string[]): PortraitPromptResponse {
-    const classDescriptors = {
-      Fighter: "armored warrior, sword and shield, battle-ready stance, determined expression",
-      Rogue: "leather armor, daggers, hooded cloak, shadowy appearance, cunning eyes", 
-      Wizard: "robes, staff or spellbook, arcane symbols, wise expression, magical aura",
-      Cleric: "holy symbols, divine armor, blessed weapon, serene expression, divine light"
-    };
-    
-    const basePrompt = classDescriptors[characterClass as keyof typeof classDescriptors] || classDescriptors.Fighter;
     const keywordString = userKeywords.join(', ');
     
-    const fallbackPrompt = `fantasy art, detailed digital painting, character portrait of ${characterName}, ${characterClass}, ${basePrompt}${keywordString ? ', ' + keywordString : ''}, upper body, 3:4 aspect ratio, high quality, detailed rendering, fantasy setting`;
+    // Minimal fallback prompt without class stereotypes
+    const fallbackPrompt = `character portrait, upper body, detailed face, high quality${keywordString ? ', ' + keywordString : ''}`;
     
     return {
       prompt: fallbackPrompt,
