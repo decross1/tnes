@@ -88,11 +88,6 @@ app.post('/api/claude/messages', async (req, res) => {
   }
 });
 
-// Image Generation Proxy (for future use)
-app.post('/api/images/generate', async (req, res) => {
-  // Placeholder for image generation proxy
-  res.status(501).json({ error: 'Image generation not implemented yet' });
-});
 
 // Error handling middleware
 app.use((error, req, res, next) => {
@@ -114,5 +109,4 @@ app.listen(PORT, () => {
   console.log('📋 Available endpoints:');
   console.log('  GET  /health - Health check');
   console.log('  POST /api/claude/messages - Claude API proxy');
-  console.log('  POST /api/images/generate - Image generation proxy (future)');
 });
