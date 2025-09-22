@@ -110,3 +110,49 @@ export interface ActiveCampaignState {
     diceResult?: number;
   };
 }
+
+// New types for AI-driven dynamic scenario generation
+export type NarrativePhase = 'introduction' | 'exploration' | 'complications' | 'climax' | 'resolution';
+
+export interface StoryContext {
+  campaignTitle: string;
+  campaignGoal: string;
+  setting: string;
+  keywords: string[];
+  currentLocation?: string;
+  allies: string[];
+  enemies: string[];
+  currentObjectives: string[];
+  characterCondition: string; // e.g., "healthy", "wounded", "exhausted"
+  inventory: string[];
+  reputation?: string; // e.g., "heroic", "cunning", "diplomatic"
+}
+
+export interface DecisionSummary {
+  decisionNumber: number;
+  title: string;
+  choiceMade: string;
+  outcome: 'success' | 'failure' | 'critical_success' | 'critical_failure' | 'no_roll';
+  consequences: string;
+  storyImpact: string; // Brief description of how this affected the story
+}
+
+export interface NextScenarioRequest {
+  character: {
+    name: string;
+    class: string;
+    backstory: string;
+    level: number;
+  };
+  decisionNumber: number; // 1-15
+  narrativePhase: NarrativePhase;
+  storyContext: StoryContext;
+  recentDecisions: DecisionSummary[]; // Last 3-5 decisions for immediate context
+  keyEvents: string[]; // Major story beats to maintain continuity
+}
+
+export interface NextScenarioResponse {
+  decision: CampaignDecision;
+  updatedStoryContext: Partial<StoryContext>; // Any changes to story state
+  narrativeHints?: string[]; // Hints for future story development
+}

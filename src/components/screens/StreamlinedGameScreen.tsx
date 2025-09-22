@@ -2,12 +2,17 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import useGameStore from '../../stores/gameStore';
 import DiceRoller from '../game/DiceRoller';
+import { claudeApi } from '../../services/claudeApi';
 import type { 
   CampaignGenerationResult, 
   CampaignDecision, 
   CampaignChoice, 
   CampaignPlayState,
-  CampaignDecisionResult 
+  CampaignDecisionResult,
+  NextScenarioRequest,
+  StoryContext,
+  DecisionSummary,
+  NarrativePhase
 } from '../../types/streamlinedCampaign';
 
 export default function StreamlinedGameScreen() {
@@ -24,6 +29,10 @@ export default function StreamlinedGameScreen() {
   const [currentDecision, setCurrentDecision] = useState<CampaignDecision | null>(null);
   const [pendingRoll, setPendingRoll] = useState<{ choice: CampaignChoice; diceResult?: number } | null>(null);
   const [showProgress, setShowProgress] = useState(false);
+  
+  // New state for AI-driven story tracking
+  const [storyContext, setStoryContext] = useState<StoryContext | null>(null);
+  const [isGeneratingScenario, setIsGeneratingScenario] = useState(false);
 
   // Initialize campaign from scene context
   useEffect(() => {
@@ -50,11 +59,11 @@ export default function StreamlinedGameScreen() {
 
       setCurrentDecision(mockDecision);
       
-      // Initialize play state
+      // Initialize play state - ALWAYS set totalDecisions to 15 for dynamic campaigns
       setPlayState({
         campaignId: currentScene.campaignContext.campaignId || 'unknown',
         currentDecision: currentScene.campaignContext.decisionId || 1,
-        totalDecisions: currentScene.campaignContext.totalDecisions || 15,
+        totalDecisions: 15, // Fixed: Always 15 decisions for dynamic campaigns
         decisionHistory: [],
         isComplete: false,
         characterStatus: {
@@ -65,7 +74,103 @@ export default function StreamlinedGameScreen() {
         }
       });
     }
+    // Initialize story context and campaign data from scene
+    if (currentScene?.campaignContext && !storyContext) {
+      // Get campaign data from the scene (passed from CampaignConstructorIntegration)
+      let campaignData = activeCampaign;
+      
+      // Check if scene has campaign data embedded
+      if (!campaignData && (currentScene as any).campaignData) {
+        campaignData = (currentScene as any).campaignData as CampaignGenerationResult;
+        setActiveCampaign(campaignData);
+        console.log('📊 Loaded campaign data from scene:', campaignData.title);
+      }
+      
+      // Fallback if still no campaign data
+      if (!campaignData) {
+        const fallbackCampaignData: CampaignGenerationResult = {
+          id: currentScene.campaignContext.campaignId,
+          title: 'Your Adventure',
+          description: 'An AI-driven adventure that adapts to your choices',
+          setting: 'A mysterious realm',
+          mainGoal: 'Complete your quest and discover your destiny',
+          characterIntegration: {
+            name: character?.name || 'Hero',
+            class: character?.class?.name || 'Adventurer',
+            backstory: character?.backstory || 'A mysterious past guides your actions'
+          },
+          generationType: 'random',
+          keywords: [],
+          decisions: [] // Empty for dynamic generation
+        };
+        setActiveCampaign(fallbackCampaignData);
+        campaignData = fallbackCampaignData;
+      }
+      
+      const initialStoryContext: StoryContext = {
+        campaignTitle: campaignData?.title || 'Your Adventure',
+        campaignGoal: campaignData?.mainGoal || 'Complete your quest',
+        setting: campaignData?.setting || 'A mysterious realm',
+        keywords: campaignData?.keywords || [],
+        allies: [],
+        enemies: [],
+        currentObjectives: [campaignData?.mainGoal || 'Begin your adventure'],
+        characterCondition: 'healthy',
+        inventory: []
+      };
+      setStoryContext(initialStoryContext);
+      console.log('📖 Initialized story context:', initialStoryContext);
+    }
   }, [currentScene, character]);
+
+  // Helper function to determine current narrative phase
+  const getNarrativePhase = (decisionNumber: number): NarrativePhase => {
+    if (decisionNumber <= 3) return 'introduction';
+    if (decisionNumber <= 8) return 'exploration';
+    if (decisionNumber <= 12) return 'complications';
+    if (decisionNumber <= 14) return 'climax';
+    return 'resolution';
+  };
+
+  // Helper function to create detailed decision summaries for AI context
+  const createDecisionSummaries = (history: CampaignDecisionResult[]): DecisionSummary[] => {
+    return history.slice(-5).map(decision => {
+      // Create detailed story impact based on success/failure
+      let detailedImpact = decision.storyOutcome;
+      
+      if (decision.abilityCheck) {
+        const rollInfo = `(rolled ${decision.abilityCheck.roll} vs DC ${decision.abilityCheck.dc})`;
+        const outcomeDesc = decision.abilityCheck.result === 'success' ? 'succeeded' :
+                           decision.abilityCheck.result === 'failure' ? 'failed' :
+                           decision.abilityCheck.result === 'critical_success' ? 'critically succeeded' :
+                           decision.abilityCheck.result === 'critical_failure' ? 'critically failed' : 'attempted';
+        
+        detailedImpact = `${character?.name} ${outcomeDesc} ${rollInfo}: ${decision.storyOutcome}`;
+      }
+      
+      return {
+        decisionNumber: decision.decisionId,
+        title: `Decision ${decision.decisionId}`,
+        choiceMade: decision.choiceText,
+        outcome: decision.abilityCheck?.result || 'no_roll',
+        consequences: decision.consequences,
+        storyImpact: detailedImpact
+      };
+    });
+  };
+
+  // Helper function to extract key events from decision history
+  const extractKeyEvents = (history: CampaignDecisionResult[]): string[] => {
+    return history
+      .filter(decision => 
+        decision.abilityCheck?.result === 'critical_success' || 
+        decision.abilityCheck?.result === 'critical_failure' ||
+        decision.storyOutcome.toLowerCase().includes('important') ||
+        decision.storyOutcome.toLowerCase().includes('significant')
+      )
+      .map(decision => `${decision.choiceText}: ${decision.storyOutcome}`)
+      .slice(-3); // Keep only the last 3 key events
+  };
 
   const handleChoiceSelect = useCallback(async (choice: CampaignChoice) => {
     console.log('🎯 Player selected choice:', choice);
@@ -193,8 +298,8 @@ export default function StreamlinedGameScreen() {
     if (newPlayState.isComplete) {
       handleCampaignComplete(newPlayState);
     } else {
-      // Generate next decision
-      generateNextDecision(newPlayState.currentDecision);
+      // Generate next decision (now async)
+      await generateNextDecision(newPlayState.currentDecision);
     }
   };
 
@@ -208,49 +313,115 @@ export default function StreamlinedGameScreen() {
     return choice.consequences;
   };
 
-  const generateNextDecision = (decisionNumber: number) => {
-    // Use the pre-generated campaign if available
-    if (activeCampaign && activeCampaign.decisions) {
-      const nextDecision = activeCampaign.decisions.find(d => d.id === decisionNumber);
-      if (nextDecision) {
-        console.log(`🎯 Loading decision ${decisionNumber} from generated campaign`);
-        setCurrentDecision(nextDecision);
-        return;
-      }
+  const generateNextDecision = async (decisionNumber: number) => {
+    if (!character || !playState || !storyContext) {
+      console.error('Missing required data for AI scenario generation');
+      return;
     }
 
-    // Fallback to mock decision if campaign data unavailable
-    console.log(`⚠️ No campaign data found for decision ${decisionNumber}, using fallback`);
-    const mockNextDecision: CampaignDecision = {
-      id: decisionNumber,
-      title: `Decision ${decisionNumber}`,
-      scenario: `${character?.name || 'The adventurer'} faces a new challenge. The previous choice has led to unforeseen circumstances that now demand immediate attention.`,
-      choices: [
-        {
-          id: 'A',
-          text: 'Act with courage and face the challenge head-on',
-          type: 'combat',
-          abilityCheck: { ability: 'strength', dc: 12 },
-          consequences: 'You meet the challenge with determination'
-        },
-        {
-          id: 'B',
-          text: 'Use cunning and try to find an alternative approach',
-          type: 'tactical',
-          abilityCheck: { ability: 'intelligence', dc: 13 },
-          consequences: 'You discover a clever solution'
-        },
-        {
-          id: 'C',
-          text: 'Attempt to negotiate and find a peaceful resolution',
-          type: 'social',
-          abilityCheck: { ability: 'charisma', dc: 14 },
-          consequences: 'Your words carry weight in this situation'
-        }
-      ]
-    };
+    setIsGeneratingScenario(true);
+    
+    try {
+      console.log(`🤖 Generating AI scenario for decision ${decisionNumber}`);
+      
+      // Always try AI generation first for decisions > 1
+      if (decisionNumber > 1) {
+        // Prepare AI generation request
+        const narrativePhase = getNarrativePhase(decisionNumber);
+        const recentDecisions = createDecisionSummaries(playState.decisionHistory);
+        const keyEvents = extractKeyEvents(playState.decisionHistory);
 
-    setCurrentDecision(mockNextDecision);
+        const request: NextScenarioRequest = {
+          character: {
+            name: character.name,
+            class: character.class.name,
+            backstory: character.backstory || 'A mysterious past guides your actions.',
+            level: character.level
+          },
+          decisionNumber,
+          narrativePhase,
+          storyContext,
+          recentDecisions,
+          keyEvents
+        };
+
+        try {
+          // Generate the scenario using AI
+          const response = await claudeApi.generateNextScenario(request);
+          
+          console.log('✅ AI scenario generated successfully:', response.decision.title);
+          
+          // Update story context with any changes from AI
+          if (response.updatedStoryContext) {
+            setStoryContext(prev => prev ? { ...prev, ...response.updatedStoryContext } : prev);
+          }
+          
+          setCurrentDecision(response.decision);
+          setIsGeneratingScenario(false);
+          return;
+        } catch (aiError) {
+          console.warn('AI generation failed, trying pre-generated fallback:', aiError);
+          // Continue to pre-generated fallback below
+        }
+      }
+
+      // Fallback: Use pre-generated campaign decisions (only for decision 1 or if AI fails)
+      if (activeCampaign && activeCampaign.decisions) {
+        const nextDecision = activeCampaign.decisions.find(d => d.id === decisionNumber);
+        if (nextDecision) {
+          console.log(`🎯 Using fallback decision ${decisionNumber} from generated campaign`);
+          setCurrentDecision(nextDecision);
+          setIsGeneratingScenario(false);
+          return;
+        }
+      }
+      
+    } catch (error) {
+      console.error('Failed to generate AI scenario, using enhanced fallback:', error);
+      
+      // Enhanced fallback that's still better than the old generic version
+      const narrativePhase = getNarrativePhase(decisionNumber);
+      const fallbackDecision: CampaignDecision = {
+        id: decisionNumber,
+        title: `${narrativePhase === 'introduction' ? 'The Journey Begins' : 
+                narrativePhase === 'exploration' ? 'Deeper Into Mystery' :
+                narrativePhase === 'complications' ? 'Rising Tensions' :
+                narrativePhase === 'climax' ? 'The Final Test' : 'Resolution'}`,
+        scenario: `${character.name} faces a pivotal moment in the ${narrativePhase} of your adventure. The choices you've made have led to this critical juncture where your ${character.class.name} skills will be put to the test.`,
+        choices: [
+          {
+            id: 'A',
+            text: `Use your ${character.class.name} training to take direct action`,
+            type: 'combat',
+            abilityCheck: { 
+              ability: character.class.name === 'Fighter' ? 'strength' : 
+                      character.class.name === 'Rogue' ? 'dexterity' :
+                      character.class.name === 'Wizard' ? 'intelligence' : 'wisdom', 
+              dc: Math.min(20, Math.max(10, 10 + Math.floor(decisionNumber / 2)))
+            },
+            consequences: 'You rely on your primary abilities to overcome the challenge'
+          },
+          {
+            id: 'B',
+            text: 'Look for a clever alternative approach',
+            type: 'tactical',
+            abilityCheck: { ability: 'intelligence', dc: Math.min(20, Math.max(10, 12 + Math.floor(decisionNumber / 3))) },
+            consequences: 'You attempt to find an innovative solution'
+          },
+          {
+            id: 'C',
+            text: 'Try to understand the situation better first',
+            type: 'exploration',
+            abilityCheck: { ability: 'wisdom', dc: Math.min(20, Math.max(10, 8 + Math.floor(decisionNumber / 2))) },
+            consequences: 'You gather more information before acting'
+          }
+        ]
+      };
+      
+      setCurrentDecision(fallbackDecision);
+    } finally {
+      setIsGeneratingScenario(false);
+    }
   };
 
   const handleCampaignComplete = (finalPlayState: CampaignPlayState) => {
@@ -327,6 +498,36 @@ What would you like to do next?`,
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-fantasy-midnight to-fantasy-shadow">
+      {/* Scenario Generation Loading Overlay */}
+      <AnimatePresence>
+        {isGeneratingScenario && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
+          >
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              className="bg-fantasy-parchment rounded-xl shadow-2xl p-8 text-center max-w-md mx-4"
+            >
+              <div className="w-16 h-16 border-4 border-fantasy-gold/30 border-t-fantasy-gold rounded-full animate-spin mx-auto mb-4"></div>
+              <h3 className="text-xl font-fantasy font-bold text-fantasy-midnight mb-2">
+                Crafting Your Next Adventure...
+              </h3>
+              <p className="text-fantasy-shadow text-sm">
+                The AI is weaving your story based on your previous choices and character development.
+              </p>
+              <div className="mt-4 text-xs text-fantasy-bronze">
+                Decision {playState?.currentDecision || '?'} of {playState?.totalDecisions || 15}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Progress Bar */}
       <div className="w-full bg-fantasy-shadow p-4">
         <div className="max-w-4xl mx-auto">
@@ -374,6 +575,34 @@ What would you like to do next?`,
                 exit={{ opacity: 0, y: -20 }}
                 className="bg-fantasy-parchment rounded-xl shadow-2xl p-8"
               >
+                {/* Previous Story Context */}
+                {playState && playState.decisionHistory.length > 0 && playState.decisionHistory[playState.decisionHistory.length - 1] && (
+                  <div className="mb-8 p-4 bg-fantasy-silver/20 rounded-lg border-l-4 border-fantasy-bronze">
+                    <h2 className="font-fantasy text-lg font-bold text-fantasy-midnight mb-3 flex items-center">
+                      📖 Previous Story
+                    </h2>
+                    <div className="text-sm text-fantasy-shadow space-y-2">
+                      <div>
+                        <span className="font-semibold">Your Previous Choice:</span> {playState.decisionHistory[playState.decisionHistory.length - 1].choiceText}
+                      </div>
+                      {playState.decisionHistory[playState.decisionHistory.length - 1].abilityCheck && (
+                        <div>
+                          <span className="font-semibold">Roll Result:</span> {
+                            playState.decisionHistory[playState.decisionHistory.length - 1].abilityCheck?.result === 'success' ? '✅' : 
+                            playState.decisionHistory[playState.decisionHistory.length - 1].abilityCheck?.result === 'failure' ? '❌' : 
+                            playState.decisionHistory[playState.decisionHistory.length - 1].abilityCheck?.result === 'critical_success' ? '🌟' : 
+                            playState.decisionHistory[playState.decisionHistory.length - 1].abilityCheck?.result === 'critical_failure' ? '💥' : '➡️'
+                          } Rolled {playState.decisionHistory[playState.decisionHistory.length - 1].abilityCheck.roll} vs DC {playState.decisionHistory[playState.decisionHistory.length - 1].abilityCheck.dc} 
+                          ({playState.decisionHistory[playState.decisionHistory.length - 1].abilityCheck.result === 'success' || playState.decisionHistory[playState.decisionHistory.length - 1].abilityCheck.result === 'critical_success' ? 'Success' : 'Failure'})
+                        </div>
+                      )}
+                      <div>
+                        <span className="font-semibold">What Happened:</span> {playState.decisionHistory[playState.decisionHistory.length - 1].storyOutcome}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Scenario */}
                 <div className="mb-8">
                   <h1 className="font-fantasy text-3xl font-bold text-fantasy-midnight mb-4 text-center">
@@ -498,14 +727,33 @@ What would you like to do next?`,
 
               {playState.decisionHistory.length > 0 && (
                 <div className="bg-white/30 rounded-lg p-4">
-                  <h4 className="font-semibold text-fantasy-midnight mb-2">Recent Decisions</h4>
-                  <div className="space-y-2 max-h-60 overflow-y-auto">
-                    {playState.decisionHistory.slice(-5).reverse().map((decision, index) => (
-                      <div key={decision.decisionId} className="text-xs text-fantasy-shadow">
-                        <div className="font-medium">Decision {decision.decisionId}: {decision.choiceId}</div>
-                        <div>{decision.choiceText.slice(0, 50)}...</div>
-                      </div>
-                    ))}
+                  <h4 className="font-semibold text-fantasy-midnight mb-2">Story Timeline</h4>
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                    {playState.decisionHistory.slice(-5).reverse().map((decision, index) => {
+                      const outcomeIcon = decision.abilityCheck?.result === 'success' ? '✅' : 
+                                         decision.abilityCheck?.result === 'failure' ? '❌' : 
+                                         decision.abilityCheck?.result === 'critical_success' ? '🌟' : 
+                                         decision.abilityCheck?.result === 'critical_failure' ? '💥' : '➡️';
+                      
+                      return (
+                        <div key={decision.decisionId} className="border-l-2 border-fantasy-bronze/30 pl-3 pb-3">
+                          <div className="font-medium text-fantasy-midnight text-sm mb-1">
+                            Decision {decision.decisionId}: {decision.choiceId}
+                          </div>
+                          <div className="text-xs text-fantasy-shadow mb-1">
+                            <strong>Choice:</strong> {decision.choiceText}
+                          </div>
+                          {decision.abilityCheck && (
+                            <div className="text-xs text-fantasy-shadow mb-1">
+                              <strong>Roll:</strong> {outcomeIcon} {decision.abilityCheck.roll} vs DC {decision.abilityCheck.dc}
+                            </div>
+                          )}
+                          <div className="text-xs text-fantasy-shadow">
+                            <strong>Outcome:</strong> {decision.storyOutcome}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}

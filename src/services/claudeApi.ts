@@ -8,7 +8,10 @@ import type {
   CampaignGenerationRequest,
   CampaignGenerationResult,
   CampaignDecision,
-  CampaignPlayState
+  CampaignPlayState,
+  NextScenarioRequest,
+  NextScenarioResponse,
+  NarrativePhase
 } from '../types/streamlinedCampaign';
 
 export interface ClaudeResponse {
@@ -612,7 +615,44 @@ Output only the optimized Stable Diffusion prompt, no explanations.`;
   }
 
   /**
+   * Generate just the first decision for a new campaign (for dynamic workflow)
+   */
+  async generateCampaignStart(request: CampaignGenerationRequest): Promise<CampaignGenerationResult> {
+    console.log('🎯 Generating campaign start (first decision only):', {
+      type: request.type,
+      keywords: request.keywords,
+      character: request.characterIntegration.name,
+      class: request.characterIntegration.class
+    });
+
+    const systemPrompt = `You are an expert D&D dungeon master creating the opening of a new campaign. Generate compelling campaign details and the first decision that will set the tone for a dynamic, evolving adventure.`;
+
+    const userPrompt = this.buildCampaignStartPrompt(request);
+
+    try {
+      const response = await this.makeRequest(userPrompt, {
+        maxTokens: 1500, // Smaller for just first decision
+        temperature: 0.8,
+        system: systemPrompt
+      });
+
+      const campaignResult = this.parseCampaignStartResponse(response.content, request);
+      
+      console.log('✅ Campaign start generated successfully:', {
+        title: campaignResult.title,
+        firstDecisionTitle: campaignResult.decisions[0]?.title
+      });
+
+      return campaignResult;
+    } catch (error) {
+      console.warn('⚠️ AI campaign start generation failed, using fallback');
+      return this.generateFallbackCampaignStart(request);
+    }
+  }
+
+  /**
    * Generate a complete 15-decision D&D campaign based on character and player input
+   * [LEGACY METHOD - now only used if dynamic generation fails]
    */
   async generateCampaign(request: CampaignGenerationRequest): Promise<CampaignGenerationResult> {
     console.log('🎯 Generating complete D&D campaign:', {
@@ -792,6 +832,493 @@ Generate the complete campaign now:
     }
     
     return decisions;
+  }
+
+  private buildCampaignStartPrompt(request: CampaignGenerationRequest): string {
+    const { characterIntegration, type, keywords } = request;
+    
+    return `
+🎯 CAMPAIGN START GENERATION - First Decision Only
+
+📋 CHARACTER INTEGRATION:
+- Name: ${characterIntegration.name}
+- Class: ${characterIntegration.class}
+- Backstory: ${characterIntegration.backstory}
+
+🎲 CAMPAIGN REQUIREMENTS:
+- Type: ${type === 'keywords' ? 'Keyword-guided adventure' : 'Fully random adventure'}
+${keywords && keywords.length > 0 ? `- Keywords to incorporate: ${keywords.join(', ')}` : ''}
+
+📖 GENERATE CAMPAIGN SETUP + FIRST DECISION:
+
+Create the opening of a dynamic D&D campaign that will evolve based on player choices. Generate:
+1. Campaign overview (title, setting, main goal)
+2. ONLY the first decision point - subsequent decisions will be generated dynamically
+
+FORMAT YOUR RESPONSE AS JSON:
+{
+  "title": "Campaign Title",
+  "description": "2-3 sentence campaign overview", 
+  "setting": "Where the adventure takes place",
+  "mainGoal": "Primary objective for the character",
+  "decisions": [
+    {
+      "id": 1,
+      "title": "Opening Decision Title",
+      "scenario": "Opening scenario description that establishes the world and presents first choice (2-3 sentences)",
+      "choices": [
+        {
+          "id": "A",
+          "text": "Choice description",
+          "type": "exploration" | "social" | "combat" | "tactical",
+          "abilityCheck": {
+            "ability": "strength" | "dexterity" | "constitution" | "intelligence" | "wisdom" | "charisma",
+            "dc": 8-12
+          },
+          "consequences": "What happens if chosen"
+        }
+        // Include 3-4 varied choices for the opening
+      ]
+    }
+  ]
+}
+
+🎭 OPENING REQUIREMENTS:
+- Set in the ${type === 'keywords' && keywords?.length ? 'introduction' : 'introduction'} phase - establish world and conflict
+- Make the first choice meaningful and set tone for adventure
+- Include 3-4 choices with different types (exploration, social, combat, tactical)
+- Use easier DCs (8-12) for the opening decision
+- Integrate ${characterIntegration.name}'s ${characterIntegration.class} background naturally
+
+${keywords && keywords.length > 0 ? `
+🏷️ KEYWORD INTEGRATION:
+Weave these elements into the opening: ${keywords.join(', ')}
+` : ''}
+
+Generate the campaign start now:
+`;
+  }
+
+  private parseCampaignStartResponse(response: string, request: CampaignGenerationRequest): CampaignGenerationResult {
+    try {
+      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const campaignData = JSON.parse(jsonMatch[0]);
+        
+        // Ensure we only have the first decision
+        campaignData.decisions = campaignData.decisions ? [campaignData.decisions[0]] : [];
+        
+        return {
+          ...campaignData,
+          id: `campaign_start_${Date.now()}`,
+          characterIntegration: request.characterIntegration,
+          generationType: request.type,
+          keywords: request.keywords || []
+        };
+      }
+      throw new Error('No valid JSON found in campaign start response');
+    } catch (error) {
+      console.warn('Failed to parse AI campaign start response, using fallback');
+      return this.generateFallbackCampaignStart(request);
+    }
+  }
+
+  private generateFallbackCampaignStart(request: CampaignGenerationRequest): CampaignGenerationResult {
+    const { characterIntegration, keywords = [] } = request;
+    
+    return {
+      id: `campaign_start_fallback_${Date.now()}`,
+      title: `${characterIntegration.name}'s Adventure Begins`,
+      description: `A new adventure begins for ${characterIntegration.name} the ${characterIntegration.class}. The world is full of mystery and danger, and your choices will shape the story.`,
+      setting: keywords.includes('dungeon') ? 'Ancient Dungeon Entrance' : 
+               keywords.includes('city') ? 'Bustling Medieval City' :
+               keywords.includes('forest') ? 'Mysterious Woodland' : 'Crossroads of Destiny',
+      mainGoal: `Begin your adventure and discover what fate has in store`,
+      characterIntegration: request.characterIntegration,
+      generationType: request.type,
+      keywords: keywords,
+      decisions: [{
+        id: 1,
+        title: 'The Adventure Begins',
+        scenario: `${characterIntegration.name} the ${characterIntegration.class} stands at the beginning of a great adventure. The path ahead is uncertain, but your skills and determination will guide you forward.`,
+        choices: [
+          {
+            id: 'A',
+            text: `Use your ${characterIntegration.class} training to assess the situation`,
+            type: 'exploration',
+            abilityCheck: { 
+              ability: characterIntegration.class === 'Fighter' ? 'wisdom' :
+                      characterIntegration.class === 'Rogue' ? 'wisdom' :
+                      characterIntegration.class === 'Wizard' ? 'intelligence' : 'wisdom',
+              dc: 10
+            },
+            consequences: 'You carefully evaluate your surroundings and options'
+          },
+          {
+            id: 'B',
+            text: 'Look for others who might join your quest',
+            type: 'social',
+            abilityCheck: { ability: 'charisma', dc: 11 },
+            consequences: 'You seek companions for the journey ahead'
+          },
+          {
+            id: 'C',
+            text: 'Head straight toward your goal with determination',
+            type: 'tactical',
+            abilityCheck: { ability: 'constitution', dc: 9 },
+            consequences: 'You forge ahead with confidence and resolve'
+          }
+        ]
+      }]
+    };
+  }
+
+  /**
+   * Determine the narrative phase based on decision number
+   */
+  private getNarrativePhase(decisionNumber: number): NarrativePhase {
+    if (decisionNumber <= 3) return 'introduction';
+    if (decisionNumber <= 8) return 'exploration';
+    if (decisionNumber <= 12) return 'complications';
+    if (decisionNumber <= 14) return 'climax';
+    return 'resolution';
+  }
+
+  /**
+   * Generate the next scenario dynamically based on story context and previous decisions
+   */
+  async generateNextScenario(request: NextScenarioRequest): Promise<NextScenarioResponse> {
+    console.log('🎯 Generating next scenario:', {
+      decisionNumber: request.decisionNumber,
+      narrativePhase: request.narrativePhase,
+      character: request.character.name,
+      recentDecisions: request.recentDecisions.length
+    });
+
+    const systemPrompt = `You are an expert D&D dungeon master creating the next scenario in an ongoing campaign. Generate a compelling decision point that builds naturally from previous events while maintaining narrative momentum and character agency.`;
+
+    const userPrompt = this.buildNextScenarioPrompt(request);
+
+    try {
+      const response = await this.makeRequest(userPrompt, {
+        maxTokens: 1500, // Moderate size for individual scenario
+        temperature: 0.85, // High creativity for unique scenarios
+        system: systemPrompt
+      });
+
+      const scenarioResult = this.parseNextScenarioResponse(response.content, request);
+      
+      console.log('✅ Next scenario generated successfully:', {
+        decisionId: scenarioResult.decision.id,
+        title: scenarioResult.decision.title,
+        choicesCount: scenarioResult.decision.choices.length
+      });
+
+      return scenarioResult;
+    } catch (error) {
+      console.warn('⚠️ AI scenario generation failed, using enhanced fallback');
+      return this.generateFallbackNextScenario(request);
+    }
+  }
+
+  private buildNextScenarioPrompt(request: NextScenarioRequest): string {
+    const { character, decisionNumber, narrativePhase, storyContext, recentDecisions, keyEvents } = request;
+    
+    // Create story summary from recent decisions
+    const storySummary = this.createStorySummary(recentDecisions, keyEvents);
+    
+    // Define phase-specific guidance
+    const phaseGuidance = this.getPhaseGuidance(narrativePhase, decisionNumber);
+    
+    return `
+🎯 DYNAMIC SCENARIO GENERATION - Decision ${decisionNumber}/15
+
+📋 CHARACTER CONTEXT:
+- Name: ${character.name}
+- Class: ${character.class} (Level ${character.level})
+- Backstory: ${character.backstory.slice(0, 200)}...
+
+📖 CAMPAIGN CONTEXT:
+- Title: ${storyContext.campaignTitle}
+- Main Goal: ${storyContext.campaignGoal}
+- Setting: ${storyContext.setting}
+- Keywords: ${storyContext.keywords.join(', ')}
+- Current Location: ${storyContext.currentLocation || 'Unknown'}
+
+🎭 CURRENT STORY STATE:
+- Character Condition: ${storyContext.characterCondition}
+- Allies: ${storyContext.allies.length > 0 ? storyContext.allies.join(', ') : 'None known'}
+- Enemies: ${storyContext.enemies.length > 0 ? storyContext.enemies.join(', ') : 'None known'}
+- Current Objectives: ${storyContext.currentObjectives.join(', ')}
+- Reputation: ${storyContext.reputation || 'Unknown'}
+
+📜 STORY PROGRESS:
+${storySummary}
+
+🎪 NARRATIVE PHASE: ${narrativePhase.toUpperCase()} (Decision ${decisionNumber}/15)
+${phaseGuidance}
+
+📝 NARRATIVE STRUCTURE REQUIREMENTS:
+
+**CRITICAL: Follow the [Previous Outcome → New Scenario → New Choices] structure:**
+
+1. **Start with Outcome Commentary** (2-3 sentences):
+   - Clearly explain what happened as a result of the previous decision
+   - Reference the success/failure of any ability checks
+   - Show immediate consequences of the character's actions
+
+2. **Transition to New Scenario** (2-3 sentences):
+   - "As a result of [previous outcome]..." or "Following [previous action]..."
+   - Present the new situation that emerges from the previous choice
+   - Create logical story progression
+
+3. **Present Clear Choices**:
+   - Each choice should feel meaningful and distinct
+   - Vary the types: exploration, social, combat, tactical
+   - Include appropriate difficulty scaling
+
+📝 GENERATE DECISION ${decisionNumber}:
+
+Create a scenario that:
+1. **Starts with clear outcome commentary** from the most recent decision
+2. **Creates logical story progression** - what happens BECAUSE of the previous choice
+3. **Maintains character agency** - choices feel meaningful
+4. **Builds toward the campaign goal** while introducing new challenges
+5. **Matches ${narrativePhase} phase** - ${phaseGuidance}
+6. **Leverages ${character.class} abilities** naturally in the choices
+
+FORMAT AS JSON:
+{
+  "decision": {
+    "id": ${decisionNumber},
+    "title": "Descriptive Title for This Decision",
+    "scenario": "STRUCTURE: [Outcome Commentary: 2-3 sentences explaining what happened from previous decision and its results] + [New Situation: 2-3 sentences presenting the new scenario that emerges from those results] = Total 4-6 sentences with clear story progression",
+    "choices": [
+      {
+        "id": "A",
+        "text": "Choice description",
+        "type": "exploration" | "social" | "combat" | "tactical",
+        "abilityCheck": {
+          "ability": "strength" | "dexterity" | "constitution" | "intelligence" | "wisdom" | "charisma",
+          "dc": 10-20
+        },
+        "consequences": "What happens if this choice is selected"
+      }
+      // 2-4 choices total, vary the types
+    ]
+  },
+  "updatedStoryContext": {
+    "currentLocation": "New location if changed",
+    "allies": ["Updated ally list if changed"],
+    "enemies": ["Updated enemy list if changed"], 
+    "currentObjectives": ["Updated objectives if changed"],
+    "characterCondition": "Updated condition if relevant"
+  },
+  "narrativeHints": ["Hint for future story development", "Another potential plot thread"]
+}
+
+🎲 CHOICE REQUIREMENTS:
+- Include 2-4 meaningful choices (not just 2)
+- Vary choice types: mix exploration, social, combat, tactical
+- Scale difficulty: DC ${this.getRecommendedDC(decisionNumber)}±3 for phase
+- Make each choice feel meaningful and distinct
+- Ensure choices can lead to different story branches
+
+Generate the scenario now:
+`;
+  }
+
+  private createStorySummary(recentDecisions: any[], keyEvents: string[]): string {
+    if (recentDecisions.length === 0 && keyEvents.length === 0) {
+      return "This is the beginning of the adventure.";
+    }
+    
+    let summary = '';
+    
+    // Add key events for major story beats (if any)
+    if (keyEvents.length > 0) {
+      summary += "🎯 MAJOR STORY EVENTS:\n";
+      keyEvents.forEach((event, index) => {
+        summary += `• ${event}\n`;
+      });
+      summary += '\n';
+    }
+    
+    // Add structured recent decisions using the [Scenario → Selection → Result → Outcome] format
+    if (recentDecisions.length > 0) {
+      summary += "📖 RECENT STORY PROGRESSION:\n\n";
+      
+      recentDecisions.forEach((decision, index) => {
+        const outcomeIcon = decision.outcome === 'success' ? '✅' : 
+                           decision.outcome === 'failure' ? '❌' : 
+                           decision.outcome === 'critical_success' ? '🌟' : 
+                           decision.outcome === 'critical_failure' ? '💥' : '➡️';
+        
+        summary += `**Decision ${decision.decisionNumber}:**\n`;
+        summary += `🎭 Selection: ${decision.choiceMade}\n`;
+        summary += `${outcomeIcon} Result & Outcome: ${decision.storyImpact}\n`;
+        
+        if (index < recentDecisions.length - 1) {
+          summary += '\n';
+        }
+      });
+      
+      // Highlight the most recent decision for immediate context
+      if (recentDecisions.length > 0) {
+        const lastDecision = recentDecisions[recentDecisions.length - 1];
+        summary += '\n\n🔥 **MOST RECENT OUTCOME TO BUILD FROM:**\n';
+        summary += `${lastDecision.storyImpact}\n`;
+      }
+    }
+    
+    return summary.trim();
+  }
+
+  private getPhaseGuidance(phase: NarrativePhase, decisionNumber: number): string {
+    switch (phase) {
+      case 'introduction':
+        return `Focus on world-building, character introduction, and setting up the main conflict. Establish the tone and initial stakes.`;
+      
+      case 'exploration':
+        return `Develop the story world, introduce complications, and let the character discover more about the situation. Build momentum toward larger conflicts.`;
+      
+      case 'complications':
+        return `Escalate tensions, introduce moral dilemmas, and present major obstacles. The stakes should be rising significantly.`;
+      
+      case 'climax':
+        return `Present the major confrontation or ultimate test. This should be the most challenging and consequential decision point.`;
+      
+      case 'resolution':
+        return `Wrap up story threads, show consequences of major choices, and provide satisfying conclusion. Set up potential future adventures.`;
+      
+      default:
+        return `Create an engaging scenario appropriate for the middle of the adventure.`;
+    }
+  }
+
+  private getRecommendedDC(decisionNumber: number): number {
+    // Progressive difficulty scaling
+    if (decisionNumber <= 3) return 11;    // Easy start
+    if (decisionNumber <= 8) return 13;    // Medium exploration
+    if (decisionNumber <= 12) return 15;   // Hard complications
+    if (decisionNumber <= 14) return 17;   // Very hard climax
+    return 14;                             // Medium resolution
+  }
+
+  private parseNextScenarioResponse(response: string, request: NextScenarioRequest): NextScenarioResponse {
+    try {
+      // Try to extract JSON from the response
+      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const scenarioData = JSON.parse(jsonMatch[0]);
+        
+        // Validate the response structure
+        if (!scenarioData.decision || !scenarioData.decision.choices) {
+          throw new Error('Invalid scenario response structure');
+        }
+        
+        return {
+          decision: scenarioData.decision,
+          updatedStoryContext: scenarioData.updatedStoryContext || {},
+          narrativeHints: scenarioData.narrativeHints || []
+        };
+      }
+      throw new Error('No valid JSON found in scenario response');
+    } catch (error) {
+      console.warn('Failed to parse AI scenario response, using fallback');
+      return this.generateFallbackNextScenario(request);
+    }
+  }
+
+  private generateFallbackNextScenario(request: NextScenarioRequest): NextScenarioResponse {
+    const { character, decisionNumber, narrativePhase, storyContext } = request;
+    
+    // Create varied fallback scenarios based on phase and character class
+    const fallbackScenarios = this.createFallbackScenarios(character.class, narrativePhase, decisionNumber);
+    const selectedScenario = fallbackScenarios[Math.floor(Math.random() * fallbackScenarios.length)];
+    
+    return {
+      decision: {
+        id: decisionNumber,
+        title: selectedScenario.title,
+        scenario: selectedScenario.scenario.replace('{CHARACTER_NAME}', character.name),
+        choices: selectedScenario.choices.map((choice, index) => ({
+          ...choice,
+          id: String.fromCharCode(65 + index) // 'A', 'B', 'C', 'D'
+        }))
+      },
+      updatedStoryContext: {
+        characterCondition: storyContext.characterCondition
+      },
+      narrativeHints: [`Continue the ${narrativePhase} phase`, `Focus on ${character.class} abilities`]
+    };
+  }
+
+  private createFallbackScenarios(characterClass: string, phase: NarrativePhase, decisionNumber: number) {
+    // Create varied fallback scenarios that are much better than the current generic ones
+    const baseScenarios = {
+      Fighter: {
+        introduction: [
+          {
+            title: "The Warrior's Challenge",
+            scenario: "{CHARACTER_NAME} arrives to find a settlement under threat. The local guards are overwhelmed and look to you with hope.",
+            choices: [
+              { text: "Organize the defenses and rally the guards", type: "tactical" as const, abilityCheck: { ability: "charisma" as const, dc: 12 }, consequences: "You boost morale and create better defenses" },
+              { text: "Scout the enemy positions yourself", type: "exploration" as const, abilityCheck: { ability: "wisdom" as const, dc: 11 }, consequences: "You gather crucial intelligence about the threat" },
+              { text: "Challenge their leader to single combat", type: "combat" as const, abilityCheck: { ability: "strength" as const, dc: 14 }, consequences: "You face the enemy champion in honorable combat" }
+            ]
+          }
+        ],
+        exploration: [
+          {
+            title: "The Ancient Battlefield",
+            scenario: "{CHARACTER_NAME} discovers an old battlefield where spectral warriors still fight their eternal war. They seem drawn to your martial presence.",
+            choices: [
+              { text: "Try to communicate with the warrior spirits", type: "social" as const, abilityCheck: { ability: "charisma" as const, dc: 13 }, consequences: "You attempt to understand their unfinished business" },
+              { text: "Search the battlefield for ancient weapons", type: "exploration" as const, abilityCheck: { ability: "wisdom" as const, dc: 12 }, consequences: "You look for powerful artifacts among the ghostly conflict" },
+              { text: "Fight your way through the spectral army", type: "combat" as const, abilityCheck: { ability: "strength" as const, dc: 15 }, consequences: "You battle the undead warriors directly" },
+              { text: "Study the battle tactics being used", type: "tactical" as const, abilityCheck: { ability: "intelligence" as const, dc: 14 }, consequences: "You learn ancient military strategies" }
+            ]
+          }
+        ]
+        // Add more phases as needed...
+      },
+      Rogue: {
+        introduction: [
+          {
+            title: "Shadows and Secrets",
+            scenario: "{CHARACTER_NAME} notices you're being followed through the winding streets. Multiple figures keep their distance but maintain surveillance.",
+            choices: [
+              { text: "Lose them in the crowd and alleyways", type: "exploration" as const, abilityCheck: { ability: "dexterity" as const, dc: 13 }, consequences: "You slip away using your stealth skills" },
+              { text: "Double back and confront your followers", type: "combat" as const, abilityCheck: { ability: "strength" as const, dc: 12 }, consequences: "You turn the tables on your pursuers" },
+              { text: "Lead them into a trap", type: "tactical" as const, abilityCheck: { ability: "intelligence" as const, dc: 14 }, consequences: "You set up an ambush using the environment" },
+              { text: "Try to determine who they work for", type: "social" as const, abilityCheck: { ability: "wisdom" as const, dc: 11 }, consequences: "You gather information about their motives" }
+            ]
+          }
+        ]
+        // Add more scenarios...
+      }
+      // Add Wizard and Cleric scenarios...
+    };
+
+    // Return appropriate scenarios for class and phase
+    const classScenarios = baseScenarios[characterClass as keyof typeof baseScenarios];
+    if (classScenarios && classScenarios[phase as keyof typeof classScenarios]) {
+      return classScenarios[phase as keyof typeof classScenarios];
+    }
+
+    // Generic fallback if class-specific not available
+    return [
+      {
+        title: `Decision ${decisionNumber}`,
+        scenario: `{CHARACTER_NAME} faces a new challenge that tests your abilities and judgment. The path forward requires careful consideration.`,
+        choices: [
+          { text: "Take a direct approach", type: "combat" as const, abilityCheck: { ability: "strength" as const, dc: this.getRecommendedDC(decisionNumber) }, consequences: "You meet the challenge head-on" },
+          { text: "Use cunning and strategy", type: "tactical" as const, abilityCheck: { ability: "intelligence" as const, dc: this.getRecommendedDC(decisionNumber) + 1 }, consequences: "You find a clever solution" },
+          { text: "Seek more information first", type: "exploration" as const, abilityCheck: { ability: "wisdom" as const, dc: this.getRecommendedDC(decisionNumber) - 1 }, consequences: "You learn more before acting" }
+        ]
+      }
+    ];
   }
 
   /**

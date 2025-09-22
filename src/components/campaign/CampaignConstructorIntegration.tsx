@@ -30,9 +30,9 @@ export default function CampaignConstructorIntegration({
     setIsGenerating(true);
 
     try {
-      // Generate the complete campaign using Claude AI
-      const campaign = await claudeApi.generateCampaign(request);
-      console.log('✅ Campaign generated successfully:', campaign);
+      // Generate only the first decision - subsequent decisions will be generated dynamically
+      const campaign = await claudeApi.generateCampaignStart(request);
+      console.log('✅ Campaign start generated successfully:', campaign);
 
       setGeneratedCampaign(campaign);
       setShowCampaignPreview(true);
@@ -63,8 +63,10 @@ export default function CampaignConstructorIntegration({
       campaignContext: {
         campaignId: generatedCampaign.id,
         decisionId: firstDecision.id,
-        totalDecisions: generatedCampaign.decisions.length
-      }
+        totalDecisions: 15 // Fixed: Always 15 for dynamic campaigns, not the current decisions.length
+      },
+      // Add the full campaign data to the scene for the game screen
+      campaignData: generatedCampaign
     };
 
     // Set the first scene
